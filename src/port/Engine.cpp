@@ -32,6 +32,8 @@
 
 #include "Audio/GameAudio.h"
 #include "build.h"
+// Torch::ResourceType for the BK resource factory registrations below.
+#include <factories/ResourceType.h>
 #include "Extractor/GameExtractor.h"
 #include "ship/window/gui/FileBrowserWindow.h"
 #include "Interpolation/FrameInterpolation.h"
@@ -913,6 +915,7 @@ void GameEngine::RunExtract(int argc, char* argv[]) {
                     ImGui::Text("Done!");
                 } else if (phase >= 1) {
                     ImGui::Text("Processing %s... (Step %d/2)", filename.c_str(), phase);
+#ifndef __SWITCH__
                     if (Companion::Instance != nullptr && !Companion::Instance->GetCurrentAssetName().empty()) {
                         auto assetName = Companion::Instance->GetCurrentAssetName();
                         float maxWidth = 600.0f - ImGui::GetStyle().WindowPadding.x * 2;
@@ -929,6 +932,7 @@ void GameEngine::RunExtract(int argc, char* argv[]) {
                         }
                         ImGui::Text("%s", assetName.c_str());
                     }
+#endif
                 } else {
                     ImGui::Text("Starting up...");
                 }

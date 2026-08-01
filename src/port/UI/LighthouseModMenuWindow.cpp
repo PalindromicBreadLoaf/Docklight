@@ -1025,6 +1025,8 @@ void DrawInlineModExtraction() {
                 ImGui::Text("Done!");
             } else if (phase >= 1) {
                 ImGui::Text("Processing %s... (Step %d/2)", filename.c_str(), phase);
+                // Ignore all Torch-related things on Switch
+#ifndef __SWITCH__
                 if (Companion::Instance != nullptr && !Companion::Instance->GetCurrentAssetName().empty()) {
                     auto assetName = Companion::Instance->GetCurrentAssetName();
                     const float maxWidth = 600.0f - ImGui::GetStyle().WindowPadding.x * 2;
@@ -1039,6 +1041,7 @@ void DrawInlineModExtraction() {
                     }
                     ImGui::Text("%s", assetName.c_str());
                 }
+#endif
             } else {
                 ImGui::Text("Starting up...");
             }

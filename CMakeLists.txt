@@ -147,10 +147,11 @@ endif()
 # Global configuration types
 ################################################################################
 if (CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
-set(CMAKE_C_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -ffast-math -DDEBUG")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -ffast-math -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -DNDEBUG")
+# TODO: Return to -O3 and -ffast-math once everything else is known working.
+set(CMAKE_C_FLAGS_DEBUG "-g -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -DDEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
 else()
 set(CMAKE_C_FLAGS_RELEASE "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG")
@@ -512,6 +513,10 @@ option(BUILD_NAUDIO "Build with NAudio support" OFF)
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     add_subdirectory(Torch)
     target_link_libraries(${PROJECT_NAME} PRIVATE torch)
+else()
+    # Torch is not built for Switch, but the runtime still needs Torch::ResourceType to
+    # register the BK resource factories that read bk.o2r.
+    target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/Torch/src)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 
@@ -672,10 +677,12 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
           -Wno-parentheses
           -Wno-narrowing
           -Wno-missing-braces
-          -Wno-int-conversion
+          -Werror=pointer-to-int-cast
+          -Werror=int-to-pointer-cast
+          -Werror=int-conversion
           $<$<COMPILE_LANGUAGE:C>:
-              -Werror-implicit-function-declaration
-              -Wno-incompatible-pointer-types
+              -Werror=implicit-function-declaration
+              -Werror=incompatible-pointer-types
               -fpermissive
           >
           $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>

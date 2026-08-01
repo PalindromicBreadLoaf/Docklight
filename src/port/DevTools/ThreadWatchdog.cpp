@@ -120,6 +120,9 @@ std::atomic<bool> sWatcherRun{ false };
 std::atomic<int> sExpectedStallDepth{ 0 };
 std::atomic<const char*> sExpectedStallReason{ nullptr };
 
+// Last main loop phase entered.
+std::atomic<const char*> sMainLoopPhase{ nullptr };
+
 std::string DescribeUnkFlag1(int32_t f) {
     switch (f) {
         case 0x04:
@@ -372,8 +375,16 @@ std::string BuildDump(const bool* stalled, Clock::time_point now, const std::str
             out += fmt::format("Parked at: {} on {} {}/{}\n", w->isSend ? "osSendMesg (full)" : "osRecvMesg (empty)",
                                qi.name, w->mq->validCount, w->mq->msgCount);
             out += fmt::format("Producers: {}\n", qi.fedBy);
+        } else if (const char* phase = (firstStalled == WATCHDOG_MAIN_LOOP)
+                                           ? sMainLoopPhase.load(std::memory_order_acquire)
+                                           : nullptr) {
+            // The breadcrumb is exact, so it replaces the candidate list rather
+            // than joining it. A stack narrows it further still, so point at one
+            // when there is one.
+            out += fmt::format("Parked at: no queue wait. main loop entered {} and did not leave{}\n", phase,
+                               stack.empty() ? "" : "; see Stack below");
         } else if (!stack.empty()) {
-            out += "Parked at: no queue wait; see Stack below\n";
+            out += "Parked at: no queue wait. see Stack below\n";
         } else {
             out += fmt::format("Parked at: no queue wait, so loop/mutex/condvar. Candidates: {}\n",
                                kThreadNonQueueWaits[firstStalled]);
@@ -427,6 +438,8 @@ std::string BuildDump(const bool* stalled, Clock::time_point now, const std::str
     out += fmt::format("SI/audio: pfsBusy={} pollingQ={} audioFrameQ={} audioReplyQ={} audioHeld={} svcPending={}\n",
                        pfsManager_isBusy(), pfsPoll->validCount, audioFrame->validCount, audioReply->validCount,
                        port_audioHeld(), port_renderServicePending());
+    const char* mainPhase = sMainLoopPhase.load(std::memory_order_acquire);
+    out += fmt::format("Main loop: in {}\n", mainPhase != nullptr ? mainPhase : "?");
     out += fmt::format("Context: map={:#x} exit={:#x} gameMode={} build={} {}@{}", gsworld_getMap(), gsworld_getExit(),
                        getGameMode(), (char*)gBuildVersion, (char*)gGitBranch, (char*)gGitCommitHash);
 
@@ -530,6 +543,10 @@ extern "C" void ThreadWatchdog_Beat(WatchdogThread id) {
 #endif
         hb.tid.store((unsigned long)SDL_ThreadID(), std::memory_order_relaxed);
     }
+}
+
+extern "C" void ThreadWatchdog_MainLoopPhase(const char* phase) {
+    sMainLoopPhase.store(phase, std::memory_order_release);
 }
 
 extern "C" void ThreadWatchdog_Start(void) {

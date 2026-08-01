@@ -30,6 +30,9 @@ typedef enum WatchdogThread {
 // Called once per loop iteration; one relaxed atomic increment.
 void ThreadWatchdog_Beat(WatchdogThread id);
 
+// Where the main loop currently is.
+void ThreadWatchdog_MainLoopPhase(const char* phase);
+
 // Started once the decomp threads exist, stopped before shutdown teardown.
 void ThreadWatchdog_Start(void);
 void ThreadWatchdog_Stop(void);

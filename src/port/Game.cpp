@@ -317,25 +317,32 @@ int SDL_main(int argc, char* argv[]) {
         ThreadWatchdog_Beat(WATCHDOG_MAIN_LOOP);
         // Pump events every iteration: a task-starved pass must not starve
         // input and window messages.
+        ThreadWatchdog_MainLoopPhase("HandleEvents (SDL pump runs applet hooks on Switch)");
         Ship::Context::GetRawInstance()->GetWindow()->HandleEvents();
+        ThreadWatchdog_MainLoopPhase("OS_SiService (ControlDeck WriteToPad)");
         OS_SiService();
         if (IsInlineModExtractionBusy()) {
+            ThreadWatchdog_MainLoopPhase("RenderGuiFrame (mod extraction modal)");
             GameEngine::Instance->RenderGuiFrame();
             SDL_Delay(16);
             continue;
         }
+        ThreadWatchdog_MainLoopPhase("DrainRenderService");
         DrainRenderService();
+        ThreadWatchdog_MainLoopPhase("ServiceRcp to ProcessGfxCommands");
         if (!ServiceRcp()) {
             // The gui only draws inside serviced frames, so a stalled game
             // thread would freeze ImGui with it. Render gui-only frames during
             // a stall so the menu (and the watchdog dump) stays reachable.
             if (ThreadWatchdog_IsStalled(WATCHDOG_GAME_TICK)) {
+                ThreadWatchdog_MainLoopPhase("RenderGuiFrame (game tick stalled)");
                 GameEngine::Instance->RenderGuiFrame();
                 SDL_Delay(16);
                 continue;
             }
             SDL_Delay(1);
         }
+        ThreadWatchdog_MainLoopPhase("loop condition (WindowIsRunning)");
     }
     // Ask first, then release: a thread woken before the request is set would just
     // park again.

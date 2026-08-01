@@ -260,6 +260,24 @@ void CheckAndCreateModFolder() {
 
 static const std::vector<std::string> sRomArchives = { "bk.o2r" };
 
+// Shown when the ROM archives predate this build and nothing on this platform can rebuild them.
+// Only the console branch of RunExtract uses it, but it is defined everywhere so that branch stays
+// compiled — it previously sat in an #ifdef nobody built, and rotted into an unconditional exit.
+#if defined(__SWITCH__)
+// Escape sequences position the text; the console error path renders them.
+static constexpr const char* kStaleArchiveConsoleMessage = "\x1b[2;2HYou've launched the Ship with an old ROM O2R file."
+                                                           "\x1b[4;2HPlease regenerate it on a PC and relaunch."
+                                                           "\x1b[6;2HPress the Home button to exit...";
+#elif defined(__WIIU__)
+static constexpr const char* kStaleArchiveConsoleMessage = "You've launched the Ship with an old ROM O2R file.\n\n"
+                                                           "Please regenerate it on a PC and relaunch.\n\n"
+                                                           "Press and hold the Power button to shutdown...";
+#else
+static constexpr const char* kStaleArchiveConsoleMessage =
+    "Your ROM archives were created with an incompatible version of Lighthouse.\n\n"
+    "Please regenerate them and relaunch.";
+#endif
+
 static bool AnyRomArchiveExists() {
     for (const auto& archive : sRomArchives) {
         if (std::filesystem::exists(Ship::Context::LocateFileAcrossAppDirs(archive, "bk"))) {
@@ -466,22 +484,10 @@ void GameEngine::RunExtract(int argc, char* argv[]) {
     std::string installPath = Ship::Context::GetAppBundlePath();
     std::string file;
 
-#if defined(__SWITCH__)
-    LighthouseGui::RegisterPopup("Outdated ROM Archives",
-                                 "\x1b[2;2HYou've launched the Ship with an old ROM O2R file."
-                                 "\x1b[4;2HPlease regenerate a new ROM O2R and relaunch."
-                                 "\x1b[6;2HPress the Home button to exit...",
-                                 "OK", "", [&]() { exit(1); });
-#elif defined(__WIIU__)
-    LighthouseGui::RegisterPopup("Outdated ROM Archives",
-                                 "You've launched the Ship with an old a ROM O2R file.\n\n"
-                                 "Please generate a ROM O2R and relaunch.\n\n"
-                                 "Press and hold the Power button to shutdown...",
-                                 "OK", "", [&]() { exit(1); });
-    OSFatal();
-#endif
-
-    if (!std::filesystem::exists(Ship::Context::LocateFileAcrossAppDirs("/assets"))) {
+    // 'assets/' is Torch's YAML input tree, so it only matters where extraction can actually run.
+    // IsAvailable() folds to false on console, short-circuiting the probe away: demanding a folder
+    // nothing on that platform can read would just be an exit(1) in front of a working archive.
+    if (GameExtractor::IsAvailable() && !std::filesystem::exists(Ship::Context::LocateFileAcrossAppDirs("/assets"))) {
         LighthouseGui::RegisterPopup(
             "Extractor assets not found",
             "No O2R files found. Missing 'assets/' folder needed to generate OTR file.\nPlease "
@@ -492,11 +498,20 @@ void GameEngine::RunExtract(int argc, char* argv[]) {
                 exit(1);
             });
     } else if (shouldRegen) {
-        LighthouseGui::RegisterPopup("Outdated ROM Archives",
-                                     "Your ROM archives were created with incompatible versions of Lighthouse.\n"
-                                     "You will now be redirected to re-extract them.");
-        for (const auto& archive : sRomArchives) {
-            std::filesystem::remove(archive);
+        if constexpr (GameExtractor::IsAvailable()) {
+            LighthouseGui::RegisterPopup("Outdated ROM Archives",
+                                         "Your ROM archives were created with incompatible versions of Lighthouse.\n"
+                                         "You will now be redirected to re-extract them.");
+            for (const auto& archive : sRomArchives) {
+                std::filesystem::remove(archive);
+            }
+        } else {
+            // Deleting these would only force the user to re-copy them.
+            LighthouseGui::RegisterPopup("Outdated ROM Archives", kStaleArchiveConsoleMessage, "OK", "",
+                                         [&]() { exit(1); });
+#ifdef __WIIU__
+            OSFatal();
+#endif
         }
     }
 

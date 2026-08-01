@@ -54,7 +54,7 @@
 #include "UI/LighthouseModMenuWindow.h"
 
 #ifdef __SWITCH__
-#include <port/switch/SwitchImpl.h>
+#include <ship/port/switch/SwitchImpl.h>
 #endif
 
 const float imguiScaleOptionToValue[4] = { 0.75f, 1.0f, 1.5f, 2.0f };

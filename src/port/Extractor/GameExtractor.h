@@ -1,12 +1,18 @@
 #pragma once
 
-#include "Companion.h"
 #include <filesystem>
 #include <functional>
 #include <optional>
 #include <vector>
 #include <cstdint>
 #include <atomic>
+
+// Torch is not built for Switch.
+#ifndef __SWITCH__
+#include "Companion.h"
+#else
+namespace fs = std::filesystem;
+#endif
 
 class GameExtractor {
 public:

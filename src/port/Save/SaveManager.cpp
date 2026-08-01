@@ -3,6 +3,7 @@
 #include <spdlog/spdlog.h>
 #include <libultraship/bridge/consolevariablebridge.h>
 #include "port/Enhancements/Events/Hooks/Events.h"
+#include "port/PlatformFileSystem.h"
 #include "port/ShipInit.hpp"
 #include "port/ShipUtils.h"
 #include "port/UI/cvar_prefixes.h"
@@ -701,6 +702,51 @@ SaveData* Convert_JSONToSaveData(int32_t fileNum) {
     return saveData;
 }
 
+static std::filesystem::path BackupPathFor(const std::filesystem::path& path) {
+    return path.parent_path() / (path.filename().string() + ".bak");
+}
+
+static bool RecoverInterruptedWrite(const std::filesystem::path& path) {
+    const std::filesystem::path backupPath = BackupPathFor(path);
+    std::error_code ec;
+    const bool destinationExists = std::filesystem::exists(path, ec);
+    if (ec) {
+        SPDLOG_ERROR("SaveManager: failed to inspect \"{}\": {}", path.string(), ec.message());
+        return false;
+    }
+
+    const bool backupExists = std::filesystem::exists(backupPath, ec);
+    if (ec) {
+        SPDLOG_ERROR("SaveManager: failed to inspect backup \"{}\": {}", backupPath.string(), ec.message());
+        return false;
+    }
+
+    if (destinationExists) {
+        if (backupExists) {
+            std::filesystem::remove(backupPath, ec);
+            if (ec) {
+                SPDLOG_WARN("SaveManager: failed to remove stale backup \"{}\": {}", backupPath.string(),
+                            ec.message());
+            }
+        }
+        return true;
+    }
+
+    if (!backupExists) {
+        return true;
+    }
+
+    std::filesystem::rename(backupPath, path, ec);
+    if (ec) {
+        SPDLOG_ERROR("SaveManager: failed to recover \"{}\" from \"{}\": {}", path.string(), backupPath.string(),
+                     ec.message());
+        return false;
+    }
+
+    SPDLOG_WARN("SaveManager: recovered interrupted write to \"{}\"", path.string());
+    return true;
+}
+
 static void LoadGlobalData() {
     std::string globalPath = SaveManager_GetSavePath("global.json");
     if (!fs::exists(globalPath)) {
@@ -746,7 +792,13 @@ static void LoadGlobalData() {
 
 static bool WriteFileAtomically(const std::filesystem::path& path, const std::string& contents) {
     const std::filesystem::path tempPath = path.parent_path() / (path.filename().string() + ".tmp");
+    const std::filesystem::path backupPath = BackupPathFor(path);
     std::error_code ec;
+
+    if (!RecoverInterruptedWrite(path)) {
+        return false;
+    }
+
     {
         std::ofstream ofs(tempPath, std::ios::binary | std::ios::trunc);
         if (!ofs.is_open()) {
@@ -762,12 +814,54 @@ static bool WriteFileAtomically(const std::filesystem::path& path, const std::st
             return false;
         }
     }
+
+    if (!port_syncFile(tempPath.string().c_str())) {
+        SPDLOG_ERROR("SaveManager: failed to sync \"{}\"; leaving the existing file alone", tempPath.string());
+        std::filesystem::remove(tempPath, ec);
+        return false;
+    }
+
+    std::filesystem::rename(tempPath, path, ec);
+    if (!ec) {
+        if (!port_commitStorage()) {
+            SPDLOG_WARN("SaveManager: failed to commit storage after writing \"{}\"", path.string());
+        }
+        return true;
+    }
+
+    if (ec != std::errc::file_exists) {
+        SPDLOG_ERROR("SaveManager: failed to install \"{}\": {}", path.string(), ec.message());
+        std::filesystem::remove(tempPath, ec);
+        return false;
+    }
+
+    ec.clear();
+    std::filesystem::rename(path, backupPath, ec);
+    if (ec) {
+        SPDLOG_ERROR("SaveManager: failed to preserve old save \"{}\": {}", path.string(), ec.message());
+        std::filesystem::remove(tempPath, ec);
+        return false;
+    }
+
     std::filesystem::rename(tempPath, path, ec);
     if (ec) {
-        SPDLOG_ERROR("SaveManager: failed to replace \"{}\": {}", path.string(), ec.message());
-        std::error_code removeEc;
-        std::filesystem::remove(tempPath, removeEc);
+        SPDLOG_ERROR("SaveManager: failed to install new save \"{}\": {}", path.string(), ec.message());
+        std::error_code restoreEc;
+        std::filesystem::rename(backupPath, path, restoreEc);
+        if (restoreEc) {
+            SPDLOG_CRITICAL("SaveManager: failed to restore old save \"{}\" from \"{}\": {}", path.string(),
+                            backupPath.string(), restoreEc.message());
+        }
+        std::filesystem::remove(tempPath, restoreEc);
         return false;
+    }
+
+    std::filesystem::remove(backupPath, ec);
+    if (ec) {
+        SPDLOG_WARN("SaveManager: failed to remove backup \"{}\": {}", backupPath.string(), ec.message());
+    }
+    if (!port_commitStorage()) {
+        SPDLOG_WARN("SaveManager: failed to commit storage after writing \"{}\"", path.string());
     }
     return true;
 }
@@ -816,6 +910,11 @@ std::string createFileName(int fileNum) {
 }
 
 void SaveManager_Init() {
+    RecoverInterruptedWrite(SaveManager_GetSavePath("global.json"));
+    for (int fileIndex = 1; fileIndex <= 3; fileIndex++) {
+        RecoverInterruptedWrite(SaveManager_GetSavePath("file" + std::to_string(fileIndex) + ".json"));
+    }
+
     LoadGlobalData();
 
     // Ensure global.json exists

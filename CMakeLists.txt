@@ -160,13 +160,7 @@ endif()
 
 # Set game compilation version
 set(VERSION us)
-# Networking is off on Switch for now.
-# Later on it'll be enabled again.
-if(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
-    option(USE_NETWORKING "Enable networking features" OFF)
-else()
-    option(USE_NETWORKING "Enable networking features" ON)
-endif()
+option(USE_NETWORKING "Enable networking features" ON)
 set(SKIP_XCODE_VERSION_CHECK ON)
 
 # Add compile definitions for the target
@@ -447,8 +441,13 @@ if(USE_NETWORKING)
     if(MSVC)
         vcpkg_install_packages(sdl2-net)
     endif()
-    find_package(SDL2_net REQUIRED)
-    include_directories(${SDL2_NET_INCLUDE_DIRS})
+    if(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(SDL2_NET REQUIRED IMPORTED_TARGET SDL2_net)
+    else()
+        find_package(SDL2_net REQUIRED)
+        include_directories(${SDL2_NET_INCLUDE_DIRS})
+    endif()
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_NETWORKING)
 endif()
 
@@ -474,6 +473,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
     set(ADDITIONAL_LIBRARY_DEPENDENCIES
         -lglad
         SDL2::SDL2
+        "$<$<BOOL:${USE_NETWORKING}>:PkgConfig::SDL2_NET>"
         "Ogg::ogg"
         "Vorbis::vorbisfile"
     )

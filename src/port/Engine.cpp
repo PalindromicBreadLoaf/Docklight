@@ -240,17 +240,15 @@ bool PathTestCleanup() {
 
 void CheckAndCreateModFolder() {
     try {
-        std::string modsPath = Ship::Context::LocateFileAcrossAppDirs("mods", "bk");
-        if (!std::filesystem::exists(modsPath)) {
-            // Create mods folder relative to app dir
-            modsPath = Ship::Context::GetPathRelativeToAppDirectory("mods", "bk");
-            std::string filePath = modsPath + "/custom_mod_files_go_here.txt";
-            if (std::filesystem::create_directories(modsPath)) {
-                std::ofstream(filePath).close();
-                std::filesystem::create_directories(modsPath + "/~romhacks"); // BK romhacks go here
-                std::filesystem::create_directories(modsPath + "/~lang");     // Language packs go here
-                std::filesystem::create_directories(modsPath + "/~shared");   // Mods usable by everything go here
-            }
+        const std::string modsPath = Ship::Context::GetPathRelativeToAppDirectory("mods", "bk");
+        std::filesystem::create_directories(modsPath);
+        std::filesystem::create_directories(modsPath + "/~romhacks"); // BK romhacks go here
+        std::filesystem::create_directories(modsPath + "/~lang");     // Language packs go here
+        std::filesystem::create_directories(modsPath + "/~shared");   // Mods usable by everything go here
+
+        const std::string filePath = modsPath + "/custom_mod_files_go_here.txt";
+        if (!std::filesystem::exists(filePath)) {
+            std::ofstream(filePath).close();
         }
     } catch (std::filesystem::filesystem_error const&) {
         // Couldn't make the folder, continue silently
@@ -979,7 +977,7 @@ void GameEngine::RunExtract(int argc, char* argv[]) {
     Ship::WiiU::Init(appShortName);
 #endif
 
-#if not defined(__SWITCH__) && not defined(__WIIU__)
+#if !defined(__WIIU__)
     CheckAndCreateModFolder();
 #endif
     if (menuWasVisible) {

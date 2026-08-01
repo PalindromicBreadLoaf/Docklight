@@ -1,37 +1,40 @@
 #include "Network.h"
+#include <chrono>
 #include <spdlog/spdlog.h>
 #include <libultraship/libultraship.h>
+#include "port/ThreadAffinity.h"
 
 // MARK: - Public
 
 void Network::Enable(const char* host, uint16_t port) {
 #ifdef USE_NETWORKING
-    if (isEnabled) {
+    if (isEnabled.load()) {
         return;
     }
 
     if (SDLNet_ResolveHost(&networkAddress, host, port) == -1) {
         SPDLOG_ERROR("[Network] SDLNet_ResolveHost: {}", SDLNet_GetError());
+        return;
     }
-
-    isEnabled = true;
 
     // First check if there is a thread running, if so, join it
     if (receiveThread.joinable()) {
         receiveThread.join();
     }
 
+    isEnabled.store(true);
     receiveThread = std::thread(&Network::ReceiveFromServer, this);
 #endif
 }
 
 void Network::Disable() {
-    if (!isEnabled) {
+    if (!isEnabled.exchange(false)) {
         return;
     }
 
-    isEnabled = false;
-    receiveThread.join();
+    if (receiveThread.joinable()) {
+        receiveThread.join();
+    }
 }
 
 void Network::OnIncomingData(char payload[512]) {
@@ -64,30 +67,44 @@ void Network::SendJsonToRemote(nlohmann::json payload) {
 
 void Network::ReceiveFromServer() {
 #ifdef USE_NETWORKING
-    while (isEnabled) {
-        while (!isConnected && isEnabled) {
+    port_pinCurrentThread(PORT_ROLE_AUX);
+
+    while (isEnabled.load()) {
+        while (!isConnected.load() && isEnabled.load()) {
             SPDLOG_TRACE("[Network] Attempting to make connection to server...");
             networkSocket = SDLNet_TCP_Open(&networkAddress);
 
             if (networkSocket) {
-                isConnected = true;
+                isConnected.store(true);
                 receivedData.clear();
                 SPDLOG_INFO("[Network] Connection to server established!");
 
                 OnConnected();
                 break;
             }
+
+            // SDLNet_TCP_Open can fail immediately while a host is unavailable.
+            // Back off so a failed connection does not consume an entire core.
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        }
+
+        if (!isEnabled.load()) {
+            break;
         }
 
         SDLNet_SocketSet socketSet = SDLNet_AllocSocketSet(1);
-        if (networkSocket) {
-            SDLNet_TCP_AddSocket(socketSet, networkSocket);
+        if (!socketSet) {
+            SPDLOG_ERROR("[Network] SDLNet_AllocSocketSet: {}", SDLNet_GetError());
+        } else if (networkSocket && SDLNet_TCP_AddSocket(socketSet, networkSocket) == -1) {
+            SPDLOG_ERROR("[Network] SDLNet_TCP_AddSocket: {}", SDLNet_GetError());
+            SDLNet_FreeSocketSet(socketSet);
+            socketSet = nullptr;
         }
 
         // Listen to socket messages
-        while (isConnected && networkSocket && isEnabled) {
+        while (socketSet && isConnected.load() && networkSocket && isEnabled.load()) {
             // we check first if socket has data, to not block in the TCP_Recv
-            int socketsReady = SDLNet_CheckSockets(socketSet, 0);
+            int socketsReady = SDLNet_CheckSockets(socketSet, 10);
 
             if (socketsReady == -1) {
                 SPDLOG_ERROR("[Network] SDLNet_CheckSockets: {}", SDLNet_GetError());
@@ -131,15 +148,19 @@ void Network::ReceiveFromServer() {
             SDLNet_FreeSocketSet(socketSet);
         }
 
-        if (isConnected) {
+        if (isConnected.exchange(false)) {
             SDLNet_TCP_Close(networkSocket);
             networkSocket = nullptr;
-            isConnected = false;
             receivedData.clear();
             OnDisconnected();
-            SPDLOG_INFO("[Network] Ending receiving thread...");
+            if (isEnabled.load()) {
+                SPDLOG_INFO("[Network] Connection ended; reconnecting...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            }
         }
     }
+
+    SPDLOG_INFO("[Network] Ending receiving thread...");
 #endif
 }
 

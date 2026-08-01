@@ -2,6 +2,7 @@
 #define NETWORK_H
 #ifdef __cplusplus
 
+#include <atomic>
 #include <thread>
 #ifdef USE_NETWORKING
 #include <SDL2/SDL_net.h>
@@ -11,8 +12,8 @@
 class Network {
 private:
 #ifdef USE_NETWORKING
-    IPaddress networkAddress;
-    TCPsocket networkSocket;
+    IPaddress networkAddress{};
+    TCPsocket networkSocket = nullptr;
 #endif
     std::thread receiveThread;
     std::string receivedData;
@@ -22,8 +23,8 @@ private:
     void HandleRemoteJson(std::string payload);
 
 public:
-    bool isEnabled;
-    bool isConnected;
+    std::atomic_bool isEnabled = false;
+    std::atomic_bool isConnected = false;
 
     void Enable(const char* host, uint16_t port);
     void Disable();

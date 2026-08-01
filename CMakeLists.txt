@@ -373,7 +373,9 @@ if (CMAKE_GENERATOR MATCHES "Visual Studio")
     )
 endif()
 
-add_subdirectory(libultraship ${CMAKE_CURRENT_SOURCE_DIR}/libultraship)
+# Build libultraship into this build tree, not in-source to preserve cross builds
+# with other platforms/architectures.
+add_subdirectory(libultraship)
 add_dependencies(${PROJECT_NAME} libultraship)
 target_link_libraries(${PROJECT_NAME} PRIVATE libultraship)
 

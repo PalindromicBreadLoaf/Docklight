@@ -24,6 +24,7 @@
 #include "Menu.h"
 #include "MenuTypes.h"
 #include "UIWidgets.hpp"
+#include "port/DetachThread.h"
 #include "port/Engine.h"
 #include "port/Extractor/GameExtractor.h"
 #include "port/GameVersion/BaseGameVersion.h"
@@ -851,11 +852,11 @@ static void BeginInlineExtraction(std::shared_ptr<GameExtractor> extractor, bool
     sInlineResult = 0;
     sInlineLangPack = langPack;
     sInlineExtracting = true;
-    std::thread([ex = std::move(extractor)]() mutable {
+    port_detachThread(std::thread([ex = std::move(extractor)]() mutable {
         const bool ok = ex->GenerateOTR(sInlineCount, sInlineTotal, "bk");
         sInlineResult = ok ? 1 : 2;
         sInlineExtracting = false;
-    }).detach();
+    }));
 }
 
 // Shared body of the two public requests: pick a ROM, load it, and start extraction. Language packs

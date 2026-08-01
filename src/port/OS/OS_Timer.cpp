@@ -8,6 +8,8 @@
 #include <mutex>
 #include <thread>
 
+#include "port/DetachThread.h"
+
 extern "C" {
 #include "libultraship/libultra/time.h"
 }
@@ -75,7 +77,7 @@ extern "C" int osSetTimer(OSTimer* t, OSTime countdown, OSTime interval, OSMesgQ
     std::lock_guard<std::mutex> lock(sMutex);
     if (!sWorkerStarted) {
         sWorkerStarted = true;
-        std::thread(Worker).detach();
+        port_detachThread(std::thread(Worker));
     }
     Armed armed;
     armed.deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(countdown * 64 / 3);

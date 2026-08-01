@@ -11,6 +11,8 @@
 #include <spdlog/spdlog.h>
 #include <thread>
 
+#include "port/DetachThread.h"
+
 namespace {
 
 struct OsThreadState {
@@ -68,7 +70,7 @@ extern "C" void OS_JoinDecompThreads(void) {
             // Nothing safe left to do: it is still inside game code, so it cannot be
             // joined without hanging and cannot be killed without leaving locks held.
             // Detaching restores the pre-existing behaviour for that one thread.
-            st.worker.detach();
+            port_detachThread(std::move(st.worker));
         }
     }
     if (!allReturned) {

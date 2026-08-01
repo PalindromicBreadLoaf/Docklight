@@ -1,7 +1,7 @@
 [submodule "libultraship"]
 	path = libultraship
-	url = https://github.com/Kenix3/libultraship.git
-	branch = main
+	url = https://github.com/PalindromicBreadLoaf/libultraship-switch.git
+	branch = switch-port
 [submodule "Torch"]
 	path = Torch
 	url = https://github.com/HarbourMasters/Torch.git

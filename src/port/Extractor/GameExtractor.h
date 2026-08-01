@@ -16,6 +16,15 @@ namespace fs = std::filesystem;
 
 class GameExtractor {
 public:
+    // False wherever Torch is not built.
+    static constexpr bool IsAvailable() {
+#ifdef __SWITCH__
+        return false;
+#else
+        return true;
+#endif
+    }
+
     static bool GenAssetFile();
     std::optional<std::string> ValidateChecksum() const;
     bool RunStandalone(std::string rom);

@@ -25,11 +25,8 @@
 #include <unistd.h>
 #endif
 
-#ifndef __SWITCH__
-#include "Companion.h"
-#include "factories/bk64/ConfigFactory.h"
-#include "port/Romhack/RomhackTable.h"
-
+// Platform-independent members. The header declares these on every platform and the UI reads them
+// unconditionally, so they are defined outside the Torch guard below so Switch can link them.
 std::string GameExtractor::sStatusText;
 std::string GameExtractor::sLastError;
 std::string GameExtractor::sLastOutputPath;
@@ -37,6 +34,19 @@ std::atomic<int> GameExtractor::sPhase{ 0 };
 std::atomic<bool> GameExtractor::sCustomCodePromptRequested{ false };
 std::atomic<bool> GameExtractor::sCustomCodePromptActive{ false };
 std::atomic<int> GameExtractor::sCustomCodePromptResult{ -1 };
+
+void GameExtractor::SetSearchPath(const std::string& path) {
+    mSearchPath = path;
+}
+
+std::string GameExtractor::GetRomPath() {
+    return mGamePath.generic_string();
+}
+
+#ifndef __SWITCH__
+#include "Companion.h"
+#include "factories/bk64/ConfigFactory.h"
+#include "port/Romhack/RomhackTable.h"
 
 std::unordered_map<std::string, std::string> mGameList = {
     { "1fe1632098865f639e22c11b9a81ee8f29c75d7a", "Banjo-Kazooie (U) (V1.0)" },
@@ -117,10 +127,6 @@ bool GameExtractor::LoadRomFromPath(const std::string& romPath) {
     return true;
 }
 
-void GameExtractor::SetSearchPath(const std::string& path) {
-    mSearchPath = path;
-}
-
 void GameExtractor::GetRoms(std::vector<std::string>& roms) {
 #ifdef _WIN32
     WIN32_FIND_DATAA ffd;
@@ -199,10 +205,6 @@ void GameExtractor::WritePortVersion() {
     writer.Close();
 
     Companion::Instance->RegisterCompanionFile("portVersion", writer.ToVector());
-}
-
-std::string GameExtractor::GetRomPath() {
-    return mGamePath.generic_string();
 }
 
 std::string GameExtractor::GetRegionSlug() const {
@@ -383,7 +385,9 @@ bool GameExtractor::GenerateOTR(std::atomic<size_t>& assetCount, std::atomic<siz
     return true;
 }
 #else
-static bool GameExtractor::GenAssetFile() {
+
+bool GameExtractor::GenAssetFile() {
+    SPDLOG_ERROR("Asset extraction is not available on Switch.");
     return false;
 }
 
@@ -392,28 +396,34 @@ std::optional<std::string> GameExtractor::ValidateChecksum() const {
 }
 
 bool GameExtractor::LoadRomFromPath(const std::string& romPath) {
+    SPDLOG_ERROR("Cannot load ROM '{}': ROM handling is not available on Switch.", romPath);
     return false;
 }
 
 void GameExtractor::GetRoms(std::vector<std::string>& roms) {
-    // None
+}
+
+std::string GameExtractor::GetRegionSlug() const {
+    return "";
 }
 
 bool GameExtractor::GenerateOTR(std::string appShortName) {
+    sLastError = "Asset extraction is not supported on Switch. Generate the .o2r archives on a PC "
+                 "and copy them to the SD card.";
+    SPDLOG_ERROR("{}", sLastError);
     return false;
 }
 
 bool GameExtractor::GenerateOTR(std::atomic<size_t>& assetCount, std::string appShortName) {
-    return false;
+    return GenerateOTR(std::move(appShortName));
 }
 
 bool GameExtractor::GenerateOTR(std::atomic<size_t>& assetCount, std::atomic<size_t>& totalAssets,
                                 std::string appShortName) {
-    return false;
+    return GenerateOTR(std::move(appShortName));
 }
 
 void GameExtractor::WritePortVersion() {
-    // None
 }
 #endif
 

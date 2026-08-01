@@ -697,6 +697,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
 
       target_link_options(${PROJECT_NAME} PRIVATE
           -pthread
+          # SDL's Switch joystick driver launches the controller-support library
+          # from inside SDL_PumpEvents, which deadlocks the window thread.
+          -Wl,--wrap=hidLaShowControllerSupportForSystem
       )
   elseif (CMAKE_SYSTEM_NAME STREQUAL "CafeOS")
       target_compile_options(${PROJECT_NAME} PRIVATE

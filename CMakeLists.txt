@@ -159,7 +159,13 @@ endif()
 
 # Set game compilation version
 set(VERSION us)
-option(USE_NETWORKING "Enable networking features" ON)
+# Networking is off on Switch for now.
+# Later on it'll be enabled again.
+if(CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    option(USE_NETWORKING "Enable networking features" OFF)
+else()
+    option(USE_NETWORKING "Enable networking features" ON)
+endif()
 set(SKIP_XCODE_VERSION_CHECK ON)
 
 # Add compile definitions for the target
@@ -502,14 +508,24 @@ option(BUILD_FZERO "Build with F-Zero X support" OFF)
 option(BUILD_OOT "Build with Ocarina of Time support" OFF)
 option(BUILD_MARIO_ARTIST "Build with Mario Artist support" OFF)
 option(BUILD_NAUDIO "Build with NAudio support" OFF)
-add_subdirectory(Torch)
-target_link_libraries(${PROJECT_NAME} PRIVATE torch "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
+# Switch will require manual copying of files already generated on PC.
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    add_subdirectory(Torch)
+    target_link_libraries(${PROJECT_NAME} PRIVATE torch)
+endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE "${ADDITIONAL_LIBRARY_DEPENDENCIES}")
 
 if(CMAKE_SYSTEM_NAME MATCHES "NintendoSwitch")
 
+if(NOT PROJECT_TEAM)
+    set(NACP_AUTHOR_NAME "Harbour Masters & PalindromicBreadLoaf")
+else()
+    set(NACP_AUTHOR_NAME "${PROJECT_TEAM}")
+endif()
+
 nx_generate_nacp(${PROJECT_NAME}.nacp
    NAME "${PROJECT_NAME}"
-   AUTHOR "${PROJECT_TEAM}"
+   AUTHOR "${NACP_AUTHOR_NAME}"
    VERSION "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}.${PROJECT_VERSION_PATCH}"
 )
 

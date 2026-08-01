@@ -1146,6 +1146,8 @@ void GameEngine::RelaunchIfRequested(int argc, char* argv[]) {
 #elif defined(__linux__) || defined(__APPLE__)
     execv(argv[0], argv);
     SPDLOG_ERROR("Relaunch failed: execv error {}", strerror(errno));
+#else
+    SPDLOG_WARN("Relaunch requested but unsupported on this platform. exiting...");
 #endif
 }
 

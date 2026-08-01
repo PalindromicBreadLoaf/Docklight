@@ -53,6 +53,13 @@ public:
     // relaunch rather than the soft in-game reset. UI requests it, then closes
     // the window; the main loop re-execs the app after teardown completes.
     static bool sRelaunchRequested;
+    static constexpr bool CanRelaunch() {
+#if defined(_WIN32) || defined(__linux__) || defined(__APPLE__)
+        return true;
+#else
+        return false;
+#endif
+    }
     static void RequestRelaunch() {
         sRelaunchRequested = true;
     }

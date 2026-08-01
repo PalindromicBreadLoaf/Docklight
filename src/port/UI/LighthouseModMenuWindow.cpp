@@ -590,16 +590,23 @@ static void DrawModManager(const char* tableId, const ModFilter& shown, bool alp
                                          });
         }
         ImGui::SameLine();
-        if (UIWidgets::Button("Apply & Restart",
+        const char* applyLabel = "Apply & Restart";
+        const char* applyConfirm = "Restart";
+        const char* applyBody = "Applying mods requires a restart. Save the mod list and relaunch Lighthouse now?";
+        if (!GameEngine::CanRelaunch()) {
+            applyLabel = "Apply & Exit";
+            applyConfirm = "Save & Exit";
+            applyBody = "Applying mods requires a restart.\n\n"
+                        "Save the mod list and close Lighthouse now?";
+        }
+        if (UIWidgets::Button(applyLabel,
                               UIWidgets::ButtonOptions().Size(UIWidgets::Sizes::Inline).Color(THEME_COLOR))) {
-            LighthouseGui::RegisterPopup(
-                "Apply & Restart", "Applying mods requires a restart. Save the mod list and relaunch Lighthouse now?",
-                "Restart", "Cancel", []() {
-                    SetEnabledModsCVarValue();
-                    Ship::Context::GetRawInstance()->GetConsoleVariables()->Save();
-                    GameEngine::RequestRelaunch();
-                    Ship::Context::GetRawInstance()->GetWindow()->Close();
-                });
+            LighthouseGui::RegisterPopup(applyLabel, applyBody, applyConfirm, "Cancel", []() {
+                SetEnabledModsCVarValue();
+                Ship::Context::GetRawInstance()->GetConsoleVariables()->Save();
+                GameEngine::RequestRelaunch();
+                Ship::Context::GetRawInstance()->GetWindow()->Close();
+            });
         }
     }
     ImGui::BeginDisabled(!editing);
@@ -856,6 +863,17 @@ static void BeginInlineExtraction(std::shared_ptr<GameExtractor> extractor, bool
 // alive across the async pick (captured in the callback) and the detached extraction thread.
 static void StartInlineRomExtraction(bool langPack) {
     if (sInlineExtracting.load()) {
+        return;
+    }
+    // Where Torch isn't built (Switch), every extractor entry point fails. Say so up front rather
+    // than walking the user through a file picker that silently does nothing. Not #ifdef'd so the
+    // desktop build keeps type-checking this; IsAvailable() folds to true and the branch vanishes.
+    if (!GameExtractor::IsAvailable()) {
+        LighthouseGui::RegisterPopup("Not Available On This Platform",
+                                     "Extracting game data from a ROM isn't supported on this platform.\n\n"
+                                     "Generate the .o2r archives with the PC version of Lighthouse,\n"
+                                     "then copy them to your SD card alongside the game.",
+                                     "OK", "", nullptr, nullptr);
         return;
     }
     auto extractor = std::make_shared<GameExtractor>();

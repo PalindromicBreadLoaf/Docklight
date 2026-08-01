@@ -12,6 +12,7 @@
 #include <thread>
 
 #include "port/DetachThread.h"
+#include "port/ThreadAffinity.h"
 
 namespace {
 
@@ -113,6 +114,8 @@ extern "C" void OS_StartThread(OSThread* thread) {
     // Kept joinable: shutdown waits for these to leave their loops before the
     // engine they draw and play audio through is destroyed.
     it->second.worker = std::thread([entry, arg]() {
+        // Every revived decomp thread is an auxiliary.
+        port_pinCurrentThread(PORT_ROLE_AUX);
         entry(arg);
         {
             std::lock_guard<std::mutex> exitLock(sExitMutex);

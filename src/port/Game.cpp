@@ -26,6 +26,7 @@
 #include "Patches/Patches.h"
 #include "ShipUtils.h"
 #include "ShipInit.hpp"
+#include "ThreadAffinity.h"
 #include "src/port/Enhancements/Events/Hooks/Events.h"
 #include "UI/LighthouseModMenuWindow.h"
 
@@ -299,6 +300,7 @@ int SDL_main(int argc, char* argv[]) {
     }
 
     GameEngine::Create(argc, argv);
+    port_pinCurrentThread(PORT_ROLE_RENDER);
     // Both threads are created during core1_init, so allowlist them first.
     OS_EnableThreadEntry((void*)viMgr_entry);
     EnableThread5();
@@ -307,6 +309,7 @@ int SDL_main(int argc, char* argv[]) {
 
     sGameThread = std::thread([] {
         tIsGameThread = true;
+        port_pinCurrentThread(PORT_ROLE_TICK);
         while (WindowIsRunning()) {
             ThreadWatchdog_Beat(WATCHDOG_GAME_TICK);
             push_frame();

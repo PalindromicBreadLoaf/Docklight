@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "port/DevTools/ThreadWatchdog.h"
+#include "port/ThreadAffinity.h"
 
 extern "C" {
 #include "libultraship/libultra/types.h"
@@ -41,6 +42,7 @@ extern "C" void osCreateViManager(OSPri pri) {
         return;
     }
     sTicker = std::thread([] {
+        port_pinCurrentThread(PORT_ROLE_TIMER);
         constexpr std::chrono::nanoseconds kVi(16666667); // NTSC 60Hz
         auto next = std::chrono::steady_clock::now() + kVi;
         while (sTickerRun.load(std::memory_order_relaxed)) {

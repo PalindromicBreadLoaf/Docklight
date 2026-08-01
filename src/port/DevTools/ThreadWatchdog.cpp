@@ -11,6 +11,7 @@
 #include <SDL2/SDL_thread.h>
 
 #include "port/OS/OS.h"
+#include "port/ThreadAffinity.h"
 
 #if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
@@ -105,6 +106,8 @@ struct Heartbeat {
     // Real (non-pseudo) thread handle, so the watcher can walk this thread's
     // stack when it stalls. Recorded on first beat alongside the tid.
     std::atomic<void*> handle{ nullptr };
+    // Which core this thread last beat on, or -1 where the platform can't say.
+    std::atomic<int> core{ -1 };
     // Watcher-thread state
     uint64_t lastCount = 0;
     Clock::time_point lastBeat{};
@@ -408,9 +411,11 @@ std::string BuildDump(const bool* stalled, Clock::time_point now, const std::str
             park =
                 fmt::format("  {} {} {}/{}", w->isSend ? "send" : "recv", qi.name, w->mq->validCount, w->mq->msgCount);
         }
-        out += fmt::format("  {:<11} {:<7} {:>6} tid {:<6} {} beats{}\n", kThreadNames[i],
+        const int core = hb.core.load(std::memory_order_relaxed);
+        std::string coreStr = core >= 0 ? fmt::format("core {} ", core) : std::string();
+        out += fmt::format("  {:<11} {:<7} {:>6} tid {:<6} {}{} beats{}\n", kThreadNames[i],
                            (stalled != nullptr && stalled[i]) ? "STALLED" : "ok", age,
-                           hb.tid.load(std::memory_order_relaxed), count, park);
+                           hb.tid.load(std::memory_order_relaxed), coreStr, count, park);
     }
 
     Thread5WatchdogState t5;
@@ -450,6 +455,7 @@ std::string BuildDump(const bool* stalled, Clock::time_point now, const std::str
 }
 
 void Watcher() {
+    port_pinCurrentThread(PORT_ROLE_AUX);
     auto lastSample = Clock::now();
     auto lastReport = Clock::time_point{};
     bool wasStalled = false;
@@ -531,6 +537,7 @@ void Watcher() {
 extern "C" void ThreadWatchdog_Beat(WatchdogThread id) {
     Heartbeat& hb = sBeats[id];
     hb.count.fetch_add(1, std::memory_order_relaxed);
+    hb.core.store(port_currentCore(), std::memory_order_relaxed);
     if (hb.tid.load(std::memory_order_relaxed) == 0) {
 #if defined(LH_WATCHDOG_STACKS)
         // GetCurrentThread is a pseudo-handle only valid on this thread, so

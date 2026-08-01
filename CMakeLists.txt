@@ -771,11 +771,17 @@ if (CMAKE_CONFIGURATION_TYPES)
 else()
   set(TORCH_EXECUTABLE ${install_dir}/src/TorchExternal-build/torch)
 endif()
+# Stamp a version onto built o2r files so that they can be used in-game.
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+set(STAMP_PORT_VERSION_SCRIPT ${CMAKE_SOURCE_DIR}/tools/stamp_port_version.py)
+
 add_custom_target(
     ExtractAssets
     DEPENDS TorchExternal
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     COMMAND ${TORCH_EXECUTABLE} o2r baserom.z64
+    COMMAND ${Python3_EXECUTABLE} ${STAMP_PORT_VERSION_SCRIPT} "${CMAKE_SOURCE_DIR}/bk.o2r"
+            ${CMAKE_PROJECT_VERSION_MAJOR} ${CMAKE_PROJECT_VERSION_MINOR} ${CMAKE_PROJECT_VERSION_PATCH}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/bk.o2r" "${CMAKE_BINARY_DIR}/bk.o2r"
 )
 

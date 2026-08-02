@@ -100,3 +100,8 @@ cmake --build build-cmake -j
 ```
 
 A special thanks to Harbour Masters and all Lighthouse contributors for making this port possible in the first place.
+
+## Support Docklight
+
+If you’d like to support Docklight’s development and testing, you can
+  [donate to PalindromicBreadLoaf on Ko-fi](https://ko-fi.com/palindromicbreadloaf).

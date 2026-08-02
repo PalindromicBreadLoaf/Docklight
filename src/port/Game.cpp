@@ -364,6 +364,7 @@ int SDL_main(int argc, char* argv[]) {
     }
     // Before Destroy: these threads draw and play audio through the engine.
     OS_JoinDecompThreads();
+    OS_StopTimerWorker();
     ThreadWatchdog_Stop();
     OS_StopViTicker();
 #ifdef USE_NETWORKING

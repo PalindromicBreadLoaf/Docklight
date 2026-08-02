@@ -1087,15 +1087,13 @@ void GameEngine::Destroy() {
     if (Instance->context && Instance->context->GetResourceManager()) {
         Instance->context->GetResourceManager()->UnloadResources("*");
     }
+    Ship::Context::DestroyInstance();
     Instance->context = nullptr;
     // PortEnhancements_Exit();
     for (auto ptr : MemoryPool) {
         free(ptr);
     }
     MemoryPool.clear();
-#ifdef __SWITCH__
-    Ship::Switch::Exit();
-#endif
 }
 
 void GameEngine::StartFrame() const {

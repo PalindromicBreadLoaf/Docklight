@@ -8,8 +8,6 @@
 #include <mutex>
 #include <thread>
 
-#include "port/DetachThread.h"
-
 extern "C" {
 #include "libultraship/libultra/time.h"
 }
@@ -33,12 +31,18 @@ std::mutex sMutex;
 std::map<OSTimer*, Armed> sTimers;
 std::condition_variable sCv;
 bool sWorkerStarted = false;
+bool sWorkerExitRequested = false;
+// Keep the joinable object off the static-destruction path.
+std::thread* sWorker = nullptr;
 
 // One worker serves every timer, waking for whichever is due first and
 // recomputing whenever the set changes under it.
 void Worker() {
     std::unique_lock<std::mutex> lock(sMutex);
     for (;;) {
+        if (sWorkerExitRequested) {
+            return;
+        }
         OSTimer* key = nullptr;
         std::chrono::steady_clock::time_point deadline{};
         for (auto& [t, armed] : sTimers) {
@@ -75,9 +79,12 @@ void Worker() {
 
 extern "C" int osSetTimer(OSTimer* t, OSTime countdown, OSTime interval, OSMesgQueue* mq, OSMesg msg) {
     std::lock_guard<std::mutex> lock(sMutex);
+    if (sWorkerExitRequested) {
+        return -1;
+    }
     if (!sWorkerStarted) {
         sWorkerStarted = true;
-        port_detachThread(std::thread(Worker));
+        sWorker = new std::thread(Worker);
     }
     Armed armed;
     armed.deadline = std::chrono::steady_clock::now() + std::chrono::nanoseconds(countdown * 64 / 3);
@@ -94,4 +101,21 @@ extern "C" int osStopTimer(OSTimer* t) {
     sTimers.erase(t);
     sCv.notify_all();
     return 0;
+}
+
+extern "C" void OS_StopTimerWorker(void) {
+    {
+        std::lock_guard<std::mutex> lock(sMutex);
+        if (!sWorkerStarted) {
+            return;
+        }
+        sWorkerExitRequested = true;
+        sTimers.clear();
+        sCv.notify_all();
+    }
+    if (sWorker != nullptr && sWorker->joinable()) {
+        sWorker->join();
+    }
+    delete sWorker;
+    sWorker = nullptr;
 }

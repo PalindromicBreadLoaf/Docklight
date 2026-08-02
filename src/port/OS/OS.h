@@ -61,6 +61,9 @@ void OS_JamEventMesg(OSEvent event);
 // The VI ticker starts with osCreateViManager; this stops it at shutdown.
 void OS_StopViTicker(void);
 
+// Stop the worker that services osSetTimer deadlines and wait for it to exit.
+void OS_StopTimerWorker(void);
+
 // Complete one pending controller read: poll the pads and raise OS_EVENT_SI.
 // Called by the thread that owns SDL input.
 int OS_SiService(void);

@@ -1041,6 +1041,7 @@ void modelRender_executeGeoCmds(Gfx ** gfx, Mtx ** mtx, BKGeoCmd *geo_list){
 
 BKModelBin *modelRender_draw(Gfx **gfx, Mtx **mtx, f32 position[3], f32 rotation[3], f32 scale, f32*arg5, BKModelBin* model_bin){
 
+    Gfx *vertex_segment_command;
     f32 camera_focus[3];
     f32 camera_focus_distance;
     f32 padEC;
@@ -1173,6 +1174,7 @@ BKModelBin *modelRender_draw(Gfx **gfx, Mtx **mtx, f32 position[3], f32 rotation
     }
 
     // Set up segments 1 and 2 to point to vertices and textures respectively
+    vertex_segment_command = *gfx;
     gSPSegment((*gfx)++, 0x01, osVirtualToPhysical((void *)&modelRendervertexList->vertices));
     uintptr_t base_tex = (uintptr_t)&modelRenderTextureList->texture_infos[modelRenderTextureList->count];
     gSPSegment((*gfx)++, 0x02, osVirtualToPhysical((void *)base_tex));
@@ -1289,6 +1291,8 @@ BKModelBin *modelRender_draw(Gfx **gfx, Mtx **mtx, f32 position[3], f32 rotation
 
     if(model_bin->anim_vertices_list_offset != 0 && D_8038371C != NULL){
         animVerticesList_transform((BKAnimVerticesList *)((uintptr_t)modelRenderModelBin + (uintptr_t)(u32)modelRenderModelBin->anim_vertices_list_offset), modelRendervertexList, D_8038371C);
+        // [port] The transform just posed the model's shared vertex array. Hand this draw a private copy.
+        port_modelRender_snapshotAnimVertices(vertex_segment_command, vtxList_getVertices(modelRendervertexList), vtxList_getVtxCount(modelRendervertexList));
     }
 
     mlMtxIdent();

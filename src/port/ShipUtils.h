@@ -20,7 +20,7 @@ extern std::vector<std::string> abilityNameList;
 
 void TableCellCenteredText(const char* text);
 uint32_t Ship_Hash(std::string str);
-std::string port_FormatTimeDisplay(uint32_t value);
+std::string port_FormatTimeDisplay(uint64_t value);
 
 extern "C" {
 #endif
@@ -28,6 +28,11 @@ extern "C" {
 uint64_t GetUnixTimestamp();
 bool Ship_IsCStringEmpty(const char* str);
 int port_checkHeap(const char* label);
+
+// Raw reads of the jiggy/honeycomb score bitfields, bypassing
+// OnIsJiggyScoreCollected and OnIsHoneycombScoreCollected.
+u32 port_jiggyscore_isCollectedRaw(enum jiggy_e jiggy_id);
+bool port_honeycombscore_getRaw(enum honeycomb_e indx);
 
 // SPDLOG level wrappers callable from C
 void BK_LOG_INFO(const char* fmt, ...);

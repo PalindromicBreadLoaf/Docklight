@@ -20,6 +20,7 @@ typedef enum VBehaviorID {
     VB_STATIC_CAMERA_EXIT,
     VB_CAMERA_LIVE_ASPECT,
     VB_CAMERA_FOLLOW,
+    VB_CAMERA_APPLY_SHAKE,
 
     // Cutscene and celebration skips
     VB_PLAY_BOOT_LOGOS,
@@ -46,7 +47,7 @@ typedef enum VBehaviorID {
     // Gameplay options and cheats
     VB_DISABLE_SNACKER,
     VB_SAVE_AND_EXIT,
-    VB_MUMBO_HUT_TRANSFORM_CUTSCENE,
+    VB_MUMBO_DETRANSFORM,
 
     // Rando object behavior
     VB_OVERRIDE_BOTTLES_TEXT_CALLBACK,
@@ -60,6 +61,8 @@ typedef enum VBehaviorID {
     VB_OVERRIDE_TIMED_DIALOGUE,
     VB_UPDATE_JINJO_HUD,
     VB_SET_JINJO_COUNT,
+    VB_COLLECTABLE_ALREADY_HELD,
+    VB_XMAS_TREE_JIGGY_COLLIDABLE,
 
     // Dialog and localization
     VB_RESET_DIALOG_LANGUAGE,
@@ -69,8 +72,12 @@ typedef enum VBehaviorID {
     VB_CUBE_PROP_SORT,
     VB_GCLIGHTS_RECOLOR,
     VB_SNOW_CAMERA_ROTATION,
+    VB_SNOW_RENDER_STATE,
+    VB_MODEL_DRAWDIST_FADE_ALPHA,
+    VB_SPRITE_RESTORE_ALPHA_COMPARE,
     VB_DRAWDIST_BOX_CULL,
     VB_PICTUREBOX_TARGET_FB,
+    VB_PICTUREBOX_SUBMIT_FRAME,
 
     // Anchor
     VB_VILE_YUMBLIE_EMERGE,
@@ -85,9 +92,13 @@ typedef enum VBehaviorID {
     VB_DOOR_OPEN_CAMERA,        // Suppresses door-open camera lock when the flag came from a teammate, not us.
     VB_CC_RINGS_SNAP_WATER,     // CC rings water snap on run teardown: suppressed when a teammate finished the rings.
     VB_LEVELDOOR_REMOTE_OPEN_DONE, // Lair door remote-open "already handled" test.
+    VB_CCW_PODIUM_DESPAWN,    // Despawn the unrevealed CCW puzzle podium: suppressed so a teammate's switch press can
+                              // reveal it live.
+    VB_JIGSAW_PICTURE_RESYNC, // Rebuild a lair podium's cached piece state when the synced flags disagree with it.
 
     // Romhack port gates
     VB_JIGGYSCORE_LEVEL_TOTAL,
+    VB_HONEYCOMBSCORE_LEVEL_TOTAL,
     VB_PAUSEMENU_LEVEL_TO_PAGE,
     VB_PAUSEMENU_SET_NEXT_PAGE,
     VB_PAUSEMENU_DRAW_JOYSTICKS,
@@ -97,6 +108,9 @@ typedef enum VBehaviorID {
     VB_MAP_CHANGE_REQUEST,
     VB_MAP_TRANSITION_IN_INDEX,
     VB_VOID_OUT_RESPAWN_TRANSITION,
+    VB_EGG_FIRE_SFX,
+    VB_WARP_KEEPS_MUSIC,
+    VB_BUMP_REBOUNDS_PLAYER,
     VB_WARP_DISPATCH,
     VB_GAMESELECT_START_NEW_GAME,
     VB_NOTEDOOR_DRAW_NUMBER,

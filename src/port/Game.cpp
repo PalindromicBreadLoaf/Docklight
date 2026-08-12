@@ -21,6 +21,7 @@
 #include "DevTools/ThreadWatchdog.h"
 #include "GameStatus.h"
 #include "Interpolation/FrameInterpolation.h"
+#include "Nametag/Nametag.h"
 #include "Network/Anchor/Anchor.h"
 #include "OS/OS.h"
 #include "Patches/Patches.h"
@@ -41,8 +42,6 @@ void audioManagerThread_entry(void* arg);
 void core1_15B30_sendMesg3ToRenderThread(void);
 OSMesgQueue* thread5_getTaskQueue(void);
 OSMesgQueue* thread5_getSyncQueue(void);
-// Non-interactive demo/playback modes (attract demo, file playback, etc.) -- decomp gameloop.c
-bool func_802E4A08(void);
 }
 
 // The game tick runs on its own thread and submits display lists through the
@@ -110,6 +109,7 @@ extern "C" void port_thread5_onSubmit(void* taskData) {
     FrameInterpolation_GetRecordingPair(&pair.prev, &pair.curr, &pair.should);
     FrameInterpolation_ClaimPair(pair.prev, pair.curr);
     FrameInterpolation_StopRecord();
+    Nametag::SubmitFrame(task->data_ptr);
     std::lock_guard<std::mutex> lock(sInterpMutex);
     pair.serial = ++sInterpSerial;
     auto [it, inserted] = sTaskInterp.emplace(task->data_ptr, pair);
@@ -144,6 +144,7 @@ void RenderTask(void* dlStart) {
         }
     }
     FrameInterpolation_BeginRenderPass(pair.prev, pair.curr, pair.should);
+    Nametag::BeginRenderPass(dlStart, pair.should);
     GameEngine::ProcessGfxCommands((Gfx*)dlStart);
     FrameInterpolation_ReleasePair(pair.prev, pair.curr);
 }
@@ -246,8 +247,7 @@ void push_frame() {
 
     GameEngine::Instance->StartFrame();
     port_animVtx_beginTick();
-    // Demo/playback modes render at native rate with no interpolation, so skip recording it.
-    const bool recordInterpolation = GameEngine::IsInterpolationEnabled() && !func_802E4A08();
+    const bool recordInterpolation = GameEngine::IsInterpolationEnabled();
     if (recordInterpolation) {
         FrameInterpolation_StartRecord();
     }
@@ -319,6 +319,7 @@ int SDL_main(int argc, char* argv[]) {
     });
     while (WindowIsRunning() || !sGameThreadDone.load()) {
         ThreadWatchdog_Beat(WATCHDOG_MAIN_LOOP);
+        port_noteMainLoopAlive();
         // Pump events every iteration: a task-starved pass must not starve
         // input and window messages.
         ThreadWatchdog_MainLoopPhase("HandleEvents (SDL pump runs applet hooks on Switch)");
@@ -367,6 +368,7 @@ int SDL_main(int argc, char* argv[]) {
     OS_StopTimerWorker();
     ThreadWatchdog_Stop();
     OS_StopViTicker();
+    OS_StopTimerWorker();
 #ifdef USE_NETWORKING
     Anchor::GetInstance()->Disable();
     SDLNet_Quit();

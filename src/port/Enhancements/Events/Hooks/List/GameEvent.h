@@ -2,6 +2,8 @@
 
 #include <libultraship/bridge/eventsbridge.h>
 
+DEFINE_EVENT(SetAnimSpeedMult, int32_t* mult; int32_t id;)
+DEFINE_EVENT(OnActorUpdate, Actor* actor;)
 DEFINE_EVENT(OnActorDestroy, Actor* actor;)
 DEFINE_EVENT(OnPlayerDeath)
 DEFINE_EVENT(OnGameFileErase, int32_t gamenum;)
@@ -28,6 +30,9 @@ DEFINE_EVENT(OnSaveFileSave, void* saveBuffer; int32_t fileNum; int32_t * result
 typedef enum WarpId {
     WARP_ID_SM_EXIT_BANJOS_HOUSE = 1,
     WARP_ID_LAIR_ENTER_MM_LOBBY_FROM_SM_LEVEL = 2,
+    // Also lands in the MM Lobby, but from the post-cutscene branch of a different
+    // dispatcher. Listeners that treat both lair entrances alike should match on 2 || 3.
+    WARP_ID_LAIR_ENTER_LAIR_FROM_SM_LEVEL = 3,
 } WarpId;
 
 DEFINE_EVENT(OnWarpResolveDest, int32_t warpId; int32_t defaultDest; int32_t bkcfOverride; int32_t * dest;)
@@ -37,6 +42,8 @@ DEFINE_EVENT(OnNewGame, int32_t* skipIntro;)
 DEFINE_EVENT(OnGameStart)
 DEFINE_EVENT(EggHeadSpawn, float* pitch; float* spawnHeight; float* minVerticalVelocity; float* yawBias;
              int32_t * flattenTrajectory;)
+
+DEFINE_EVENT(OnLevelReset, int32_t levelId;)
 
 DEFINE_EVENT(OnGetLevelSpecificFlag, int32_t flagId; int32_t result;)
 

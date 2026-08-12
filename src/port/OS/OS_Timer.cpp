@@ -31,7 +31,7 @@ std::mutex sMutex;
 std::map<OSTimer*, Armed> sTimers;
 std::condition_variable sCv;
 bool sWorkerStarted = false;
-bool sWorkerExitRequested = false;
+bool sStop = false;
 // Keep the joinable object off the static-destruction path.
 std::thread* sWorker = nullptr;
 
@@ -40,7 +40,7 @@ std::thread* sWorker = nullptr;
 void Worker() {
     std::unique_lock<std::mutex> lock(sMutex);
     for (;;) {
-        if (sWorkerExitRequested) {
+        if (sStop) {
             return;
         }
         OSTimer* key = nullptr;
@@ -57,6 +57,9 @@ void Worker() {
         }
         if (sCv.wait_until(lock, deadline) != std::cv_status::timeout) {
             continue; // re-armed or stopped while waiting
+        }
+        if (sStop) {
+            return;
         }
         auto it = sTimers.find(key);
         if (it == sTimers.end() || it->second.deadline != deadline) {
@@ -79,8 +82,8 @@ void Worker() {
 
 extern "C" int osSetTimer(OSTimer* t, OSTime countdown, OSTime interval, OSMesgQueue* mq, OSMesg msg) {
     std::lock_guard<std::mutex> lock(sMutex);
-    if (sWorkerExitRequested) {
-        return -1;
+    if (sStop) {
+        return 0;
     }
     if (!sWorkerStarted) {
         sWorkerStarted = true;
@@ -106,13 +109,13 @@ extern "C" int osStopTimer(OSTimer* t) {
 extern "C" void OS_StopTimerWorker(void) {
     {
         std::lock_guard<std::mutex> lock(sMutex);
-        if (!sWorkerStarted) {
+        if (!sWorkerStarted || sStop) {
             return;
         }
-        sWorkerExitRequested = true;
+        sStop = true;
         sTimers.clear();
-        sCv.notify_all();
     }
+    sCv.notify_all();
     if (sWorker != nullptr && sWorker->joinable()) {
         sWorker->join();
     }

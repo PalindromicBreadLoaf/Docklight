@@ -43,7 +43,7 @@ static const char* kBottlesBonusLockedTooltip =
 
 static bool IsBottlesBonusUnlocked(int i) {
     Anchor* anchor = Anchor::GetInstance();
-    if (anchor != nullptr && anchor->isConnected) {
+    if (anchor != nullptr && anchor->isConnected && !anchor->IsGlobalRoom()) {
         return true;
     }
     return gCompletedBottlesBonusGames[i] != 0;
@@ -446,6 +446,9 @@ void LighthouseMenu::AddMenuEnhancements() {
             if (mLighthouseMenu->disabledMap.at(DISABLE_FOR_ROMHACK).active) {
                 info.activeDisables.push_back(DISABLE_FOR_ROMHACK);
             }
+            if (mLighthouseMenu->disabledMap.at(DISABLE_FOR_RANDO).active) {
+                info.activeDisables.push_back(DISABLE_FOR_RANDO);
+            }
         })
         .Options(CheckboxOptions().Tooltip(
             "Start in the Lair with all basic moves and the six empty honeycombs collected."));
@@ -680,7 +683,7 @@ void LighthouseMenu::AddMenuEnhancements() {
             "Disables Mumbo untransforming you when going too far and skips his warning dialog."));
 
     path = { "Enhancements", "Trackers", SECTION_COLUMN_1 };
-    AddSidebarEntry("Enhancements", path.sidebarName, 1);
+    AddSidebarEntry("Enhancements", path.sidebarName, 2);
     path.column = SECTION_COLUMN_1;
 
     AddWidget(path, "Gameplay Timer", WIDGET_SEPARATOR_TEXT);
@@ -709,7 +712,7 @@ void LighthouseMenu::AddMenuEnhancements() {
     AddWidget(path, "Hide Window Background", WIDGET_CVAR_CHECKBOX)
         .CVar("gDisplayOverlay.Background")
         .Options(CheckboxOptions().Tooltip("Hides the background of the Display Overlay window."));
-    AddWidget(path, "Scale: %.1fx", WIDGET_CVAR_SLIDER_FLOAT)
+    AddWidget(path, "Timer Scale", WIDGET_CVAR_SLIDER_FLOAT)
         .CVar("gDisplayOverlay.Scale")
         .Options(FloatSliderOptions()
                      .Tooltip("Adjust the Scale for the Display Overlay window.")

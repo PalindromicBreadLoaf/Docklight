@@ -31,6 +31,15 @@
 
 extern "C" void func_8031B5C4(int32_t lang); // decomp: set dialog language index
 
+extern "C" {
+// SNS picture demo table (core2/map/exit.c, Struct_core2_C4320_0). unk2 is both
+// the demo file slot and the map exit/entry-point id used for the warp.
+typedef struct {
+    uint8_t map, unk1, exit, unk3, unk4, unk5;
+} BKSnsDemoEntry;
+extern BKSnsDemoEntry D_80371F78[3];
+}
+
 // Dialog language state — detected at boot from o2r version
 static int sDialogLanguageCount = 1; // 1 for US/JP, 3 for PAL (EN/FR/DE)
 static int sDialogLanguage = 0;      // 0=English, 1=French, 2=German
@@ -120,6 +129,17 @@ const std::unordered_map<uint32_t, std::string>& GetAssetSymbolMap() {
                 break;
         }
 
+        // Non-v1.0 ROMs keep the SNS picture demos one slot lower (0x5E, matching
+        // the PAL VER_SELECT in the decomp) and their map setups place the demo
+        // entry points at that exit id too. The compiled v1.0 value (0x5F) would
+        // load the right demo file via the alias but warp to a nonexistent exit,
+        // so retarget the table; the 2508/2511/2513 aliases cover the asset side.
+        if (remapTable) {
+            for (auto& entry : D_80371F78) {
+                entry.exit = 0x5E;
+            }
+        }
+
         // Relocate the JP world-name banners to their 0x1600 aliases for a JP
         // base (a JP pack does this re-point at language-select time instead).
         if (Lighthouse::GetBaseVersion() == BK_VER_JP) {
@@ -146,6 +166,21 @@ const std::unordered_map<uint32_t, std::string>& GetAssetSymbolMap() {
                 // An empty slot on the native id stays empty under its v1.0 alias,
                 // so the decomp's hardcoded v1.0 id resolves to a silent NULL too.
                 if (sEmptyAssetSlots.count(targetId)) {
+                    sEmptyAssetSlots.insert(v10Id);
+                }
+            }
+
+            // v1.0 demo ids that the table doesn't carry are the zero-payload slots of
+            // the demo section. Alias them down 0x100 like the rest of the demo block.
+            for (uint32_t v10Id = 0x9A3; v10Id <= 0xA0A; v10Id++) {
+                if (remapTable->count(v10Id)) {
+                    continue;
+                }
+                const uint32_t targetId = v10Id - 0x100;
+                if (auto targetEntry = snapshot.find(targetId); targetEntry != snapshot.end()) {
+                    symbolMap[v10Id] = targetEntry->second;
+                } else {
+                    symbolMap.erase(v10Id);
                     sEmptyAssetSlots.insert(v10Id);
                 }
             }
@@ -222,17 +257,21 @@ extern "C" int ResourceMgr_IsAssetRepointed(uint32_t assetId) {
     return sDialogOverride.find(assetId) != sDialogOverride.end() ? 1 : 0;
 }
 
-// Resolve an asset id to its o2r path: the active language override wins for
-// re-pointed dialog ids, otherwise the base manifest.
-static std::string ResolveAssetPath(uint32_t assetId) {
-    if (auto ov = sDialogOverride.find(assetId); ov != sDialogOverride.end()) {
-        return ov->second;
-    }
+// The base game's own o2r path for an asset id, ignoring any active language re-point.
+std::string ResourceHelpers_GetBaseAssetPath(uint32_t assetId) {
     const auto& symbolMap = GetAssetSymbolMap();
     if (auto entry = symbolMap.find(assetId); entry != symbolMap.end()) {
         return entry->second;
     }
     return std::string();
+}
+
+// The o2r path an asset id resolves to right now.
+std::string ResourceHelpers_GetActiveAssetPath(uint32_t assetId) {
+    if (auto ov = sDialogOverride.find(assetId); ov != sDialogOverride.end()) {
+        return ov->second;
+    }
+    return ResourceHelpers_GetBaseAssetPath(assetId);
 }
 
 static char* LoadAndRetainResource(const std::string& path, uint32_t assetId) {
@@ -253,7 +292,7 @@ extern "C" char* ResourceMgr_ReloadByAssetId(uint32_t assetId) {
         sResourceRefCache.erase(it);
     }
 
-    std::string mappedPath = ResolveAssetPath(assetId);
+    std::string mappedPath = ResourceHelpers_GetActiveAssetPath(assetId);
     if (!mappedPath.empty()) {
         std::replace(mappedPath.begin(), mappedPath.end(), '\\', '/');
 
@@ -278,7 +317,7 @@ extern "C" char* ResourceMgr_LoadByAssetId(uint32_t assetId) {
         sResourceRefCache.erase(it);
     }
 
-    std::string mappedPath = ResolveAssetPath(assetId);
+    std::string mappedPath = ResourceHelpers_GetActiveAssetPath(assetId);
     if (mappedPath.empty()) {
         // A reserved-but-empty ROM slot resolves to nothing by design (the game
         // tolerates it, as on N64); only a genuinely-missing asset is worth tracing.

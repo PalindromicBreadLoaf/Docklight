@@ -220,6 +220,7 @@ void chMumbo_func_802D1B8C(Actor *this, enum transformation_e transform_id) {
 }
 
 void chMumbo_update(Actor *this) {
+    CALL_EVENT(OnActorUpdate, this);
     s32 face_buttons[6];
     f32 sp4C[3];
     bool sp48;
@@ -280,9 +281,9 @@ void chMumbo_update(Actor *this) {
 
         case 2: //L802D1F90
             if (actor_animationIsAt(this, 0.25f) != 0) {
-            sfxsource_playHighPriority(0x41);
-        }
-        actor_playAnimationOnce(this);
+                sfxsource_playHighPriority(0x41);
+            }
+            actor_playAnimationOnce(this);
             if (actor_animationIsAt(this, 0.999f)) {
                 if( !fileProgressFlag_get(FILEPROG_11_HAS_MET_MUMBO) 
                     && !volatileFlag_get(VOLATILE_FLAG_1) 
@@ -375,10 +376,6 @@ void chMumbo_update(Actor *this) {
             break;
 
         case 5: //L802D2488
-            // [port] Fast Transformation drives this state from Cheats.cpp instead.
-            if (!EventSystem_Should(VB_MUMBO_HUT_TRANSFORM_CUTSCENE, true, this)) {
-                break;
-            }
             actor_playAnimationOnce(this);
             if (actor_animationIsAt(this, 0.35f)){
                 sfxSource_func_8030E2C4(this->unk44_31);
@@ -514,26 +511,30 @@ Actor *chMumbo_draw(ActorMarker *marker, Gfx **gfx, Mtx **mtx, Vtx **vtx) {
 }
 
 void chMumbo_detransformWarn(NodeProp *arg0, ActorMarker *arg1){
-    s32 xform;
-    xform = player_getTransformation();
-    if(xform == TRANSFORM_1_BANJO || xform  == TRANSFORM_7_WISHWASHY || sHasWarnedBanjoAboutDetransform)
-        return;
-    
-    sHasWarnedBanjoAboutDetransform++;
-    if(D_8037DDF3)
-        return;
-    
-    gcdialog_showDialog(fileProgressFlag_getAndSet(FILEPROG_83_MAGIC_GET_WEAK_TEXT, TRUE) ? VER_SELECT(ASSET_F5C_DIALOG_MUMBO_MAGIC_GET_WEAK_ABREV, 0xAC2, 0, 0) : VER_SELECT(ASSET_F5B_DIALOG_MUMBO_MAGIC_GET_WEAK_FULL, 0xAC1, 0, 0), 0xe, NULL, NULL, NULL, NULL);
+    if (EventSystem_Should(VB_MUMBO_DETRANSFORM, true)) {
+        s32 xform;
+        xform = player_getTransformation();
+        if (xform == TRANSFORM_1_BANJO || xform == TRANSFORM_7_WISHWASHY || sHasWarnedBanjoAboutDetransform)
+            return;
+
+        sHasWarnedBanjoAboutDetransform++;
+        if (D_8037DDF3)
+            return;
+
+        gcdialog_showDialog(fileProgressFlag_getAndSet(FILEPROG_83_MAGIC_GET_WEAK_TEXT, TRUE) ? VER_SELECT(ASSET_F5C_DIALOG_MUMBO_MAGIC_GET_WEAK_ABREV, 0xAC2, 0, 0) : VER_SELECT(ASSET_F5B_DIALOG_MUMBO_MAGIC_GET_WEAK_FULL, 0xAC1, 0, 0), 0xe, NULL, NULL, NULL, NULL);
+    }
 }
 
 void chMumbo_detransformTrigger(NodeProp *arg0, ActorMarker *arg1){
-    s32 xform;
-    xform = player_getTransformation();
-    if(xform == TRANSFORM_1_BANJO || xform  == TRANSFORM_7_WISHWASHY || D_8037DDF1)
-        return;
-    gcdialog_showDialog(fileProgressFlag_getAndSet(FILEPROG_84_MAGIC_ALL_GONE_TEXT, TRUE) ? VER_SELECT(ASSET_F5E_DIALOG_MUMBO_MAGIC_RUN_OUT_ABREV, 0xAC4, 0, 0): VER_SELECT(ASSET_F5D_DIALOG_MUMBO_MAGIC_RUN_OUT_FULL, 0xAC3, 0, 0), 0xe, NULL, NULL, NULL, NULL);
-    D_8037DDF1++;
-    player_transform(TRANSFORM_1_BANJO);
+    if (EventSystem_Should(VB_MUMBO_DETRANSFORM, true)) {
+        s32 xform;
+        xform = player_getTransformation();
+        if (xform == TRANSFORM_1_BANJO || xform == TRANSFORM_7_WISHWASHY || D_8037DDF1)
+            return;
+        gcdialog_showDialog(fileProgressFlag_getAndSet(FILEPROG_84_MAGIC_ALL_GONE_TEXT, TRUE) ? VER_SELECT(ASSET_F5E_DIALOG_MUMBO_MAGIC_RUN_OUT_ABREV, 0xAC4, 0, 0) : VER_SELECT(ASSET_F5D_DIALOG_MUMBO_MAGIC_RUN_OUT_FULL, 0xAC3, 0, 0), 0xe, NULL, NULL, NULL, NULL);
+        D_8037DDF1++;
+        player_transform(TRANSFORM_1_BANJO);
+    }
 }
 
 void func_802D2CB8(void){

@@ -62,7 +62,7 @@ extern uint32_t Ship_Hash(std::string str) {
     return hval;
 }
 
-extern std::string port_FormatTimeDisplay(uint32_t value) {
+extern std::string port_FormatTimeDisplay(uint64_t value) {
     uint32_t sec = value / 10;
     uint32_t hh = sec / 3600;
     uint32_t mm = (sec - hh * 3600) / 60;
@@ -314,6 +314,23 @@ float port_getRumbleScale(void) {
         return (low + high) * 0.5f;
     }
     return 1.0f;
+}
+
+u8* jiggyscore_getPtr(void);
+u8* honeycombscore_get_ptr(void);
+
+u32 port_jiggyscore_isCollectedRaw(enum jiggy_e jiggy_id) {
+    if (jiggy_id <= 0 || jiggy_id >= 0x65) {
+        return 0;
+    }
+    return (jiggyscore_getPtr()[(jiggy_id - 1) / 8] & (1 << (jiggy_id & 7))) != 0;
+}
+
+bool port_honeycombscore_getRaw(enum honeycomb_e indx) {
+    if (indx <= 0 || indx >= 0x19) { // HONEYCOMB_COUNT
+        return 0;
+    }
+    return (honeycombscore_get_ptr()[(indx - 1) / 8] & (1 << (indx & 7))) != 0;
 }
 
 } // extern "C"

@@ -38,6 +38,7 @@ void PortEnhancements_Register() {
     // Register localization events
     REGISTER_EVENT(LocalizeFileSelectPrompt);
     REGISTER_EVENT(OnFileSelectLanguageRefresh);
+    REGISTER_EVENT(OnFileSelectPortrait);
     REGISTER_EVENT(LocalizeParade);
     REGISTER_EVENT(ParadeCreditDialogId);
     REGISTER_EVENT(ResolveBoldFontSlot);
@@ -51,6 +52,7 @@ void PortEnhancements_Register() {
     REGISTER_EVENT(OnBoldFontReset);
     REGISTER_EVENT(OnWorldDraw);
     REGISTER_EVENT(OnPlayerDraw);
+    REGISTER_EVENT(OnHudDraw);
 
     // Register behavior events
     REGISTER_EVENT(OnBeakSwimVelocitySet);
@@ -62,6 +64,7 @@ void PortEnhancements_Register() {
     REGISTER_EVENT(OnIntroCutsceneCheck);
     REGISTER_EVENT(OnMiscCutscenesCheck);
     REGISTER_EVENT(OnTooieJiggyCollect);
+    REGISTER_EVENT(OnJigsawPodiumInput);
     REGISTER_EVENT(OnMumboTokenUpdate);
     REGISTER_EVENT(OnMumboTokenIdResolve);
     REGISTER_EVENT(OnNametagDraw);
@@ -96,9 +99,11 @@ void PortEnhancements_Register() {
     REGISTER_EVENT(OnGameStart);
     REGISTER_EVENT(EggHeadSpawn);
     REGISTER_EVENT(OnActorDestroy);
+    REGISTER_EVENT(OnLevelReset);
     REGISTER_EVENT(OnCheckSpiralMountainAbilities);
-
     REGISTER_EVENT(OnReset);
+    REGISTER_EVENT(SetAnimSpeedMult);
+    REGISTER_EVENT(OnActorUpdate);
 
     // Register rando events
     REGISTER_EVENT(InitRandoEvents);

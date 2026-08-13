@@ -56,8 +56,7 @@ void DrawStatus(WidgetInfo& info) {
             replaced += (replaced.empty() ? "" : ", ") + file;
         }
         ImGui::PushTextWrapPos(0.0f);
-        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "Replaced %s",
-                           replaced.c_str());
+        ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "%s will be replaced on restart", replaced.c_str());
         ImGui::PopTextWrapPos();
     }
 
@@ -103,13 +102,15 @@ void DrawActions(WidgetInfo& info) {
         installOptions.color = Colors::Green;
         installOptions.disabled = busy;
         installOptions.disabledTooltip = "An update job is already running.";
-        installOptions.tooltip = "Download the release and reboot into it. Your saves, settings and bk.o2r are left alone."
-                                 "You will need to rebuild your bk.o2r file if either major or minor version changed.";
+        installOptions.tooltip =
+            "Download and verify the release, then restart into it. Your saves, settings and bk.o2r are left alone. "
+            "You will need to rebuild your bk.o2r file if either major or minor version changed.";
         if (UIWidgets::Button("Download and Install", installOptions)) {
             mModalWindow->RegisterPopup(
                 "Install Update",
-                "This replaces Lighthouse.nro and its assets on your SD card with Docklight " + status.latestTag +
-                    ".\n\nYour saves and settings will be preserved.",
+                "Docklight " + status.latestTag +
+                    " will be downloaded and checked now, then swapped in the next time Docklight "
+                    "starts.\n\nYour saves and settings will be preserved.",
                 "Install", "Cancel", []() { Updater::DownloadAndInstall(); }, nullptr);
         }
     }
@@ -126,10 +127,12 @@ void DrawActions(WidgetInfo& info) {
     if (status.state == Updater::State::Installed) {
         ButtonOptions restartOptions = {};
         restartOptions.color = Colors::Green;
-        restartOptions.tooltip = "Quit and relaunch into the version that was just installed.";
+        restartOptions.tooltip = "Quit and relaunch to finish installing the downloaded version.";
         if (UIWidgets::Button("Restart Now", restartOptions)) {
             mModalWindow->RegisterPopup(
-                "Restart Docklight", "Docklight will close and reopen on the new version. Unsaved progress is lost.",
+                "Restart Docklight",
+                "Docklight will close, swap the new files in as it starts, and reopen on the new version. Unsaved "
+                "progress is lost.",
                 "Restart", "Cancel",
                 []() {
                     if (!Updater::RestartIntoNewBuild()) {

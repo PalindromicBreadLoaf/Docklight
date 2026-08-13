@@ -17,8 +17,8 @@ enum class State {
     UpToDate,        // running version is current
     UpdateAvailable, // a newer release exists
     Downloading,     // fetching and unpacking the release zip
-    Installing,      // verifying hashes and swapping files in
-    Installed,       // done
+    Installing,      // verifying hashes and staging the payload
+    Installed,       // staged and verified
     Failed,          // see Status::message
 };
 
@@ -42,10 +42,13 @@ struct Status {
     bool hasDownload = false; // false when the release ships no installable archive
     uint64_t bytesDone = 0;   // download progress
     uint64_t bytesTotal = 0;
-    std::vector<std::string> installedFiles;
+    std::vector<std::string> installedFiles; // staged payload that's applied on restart
 };
 
 void SetProgramPath(const char* argv0);
+
+// Swaps in whatever a previous session downloaded and verified.
+void ApplyPendingUpdate();
 
 // Starts curl and, if the "check at startup" setting is on, check- for an update.
 void Init();

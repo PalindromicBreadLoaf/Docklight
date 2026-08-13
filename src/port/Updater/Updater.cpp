@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <functional>
 #include <map>
@@ -16,6 +17,7 @@
 #include <mbedtls/sha256.h>
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+#include <sys/stat.h>
 #include <sys/statvfs.h>
 #include <zip.h>
 
@@ -34,8 +36,10 @@ namespace {
 constexpr uint64_t kMaxDownloadBytes = 512ull * 1024 * 1024;
 constexpr size_t kCopyChunk = 64 * 1024;
 
+const char* const kPendingName = "docklight-update.pending";
+
 // Kindly don't replace these :)
-const char* const kProtectedNames[] = { "bk.o2r", "lighthouse.cfg.json" };
+const char* const kProtectedNames[] = { "bk.o2r", "lighthouse.cfg.json", kPendingName };
 
 std::mutex sMutex;
 Status sStatus;
@@ -47,6 +51,9 @@ std::atomic_bool sCurlReady{ false };
 std::string sProgramPath;
 std::string sDownloadUrl;
 uint64_t sDownloadSize = 0;
+
+std::string sBootMessage;
+bool sBootFailed = false;
 
 void SetState(State state, const std::string& message = "") {
     std::lock_guard<std::mutex> lock(sMutex);
@@ -99,6 +106,17 @@ bool IsSafePayloadName(const std::string& name) {
 std::string Basename(const std::string& path) {
     const size_t slash = path.find_last_of("/\\");
     return slash == std::string::npos ? path : path.substr(slash + 1);
+}
+
+bool FileExists(const std::string& path) {
+    struct stat info;
+    return stat(path.c_str(), &info) == 0;
+}
+
+bool EqualsIgnoreCase(const std::string& a, const std::string& b) {
+    return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](unsigned char x, unsigned char y) {
+               return tolower(x) == tolower(y);
+           });
 }
 
 bool ParseVersion(const std::string& text, Version& out) {
@@ -358,6 +376,15 @@ bool HasFreeSpace(uint64_t needed) {
     return free >= needed;
 }
 
+void RollbackCommitted(const std::vector<std::string>& committed) {
+    for (const auto& done : committed) {
+        const std::string doneLive = PathIn(done);
+        remove(doneLive.c_str());
+        rename((doneLive + ".bak").c_str(), doneLive.c_str());
+    }
+}
+
+// Swaps verified `<name>.new` files in and keeping whatever they replace as `<name>.bak`.
 bool CommitPayload(const std::vector<std::string>& names, std::string& error) {
     std::vector<std::string> committed;
     for (const auto& name : names) {
@@ -366,17 +393,18 @@ bool CommitPayload(const std::vector<std::string>& names, std::string& error) {
         const std::string staged = live + ".new";
 
         remove(backup.c_str());
-        const bool hadOriginal = rename(live.c_str(), backup.c_str()) == 0;
+        const bool movedAside = rename(live.c_str(), backup.c_str()) == 0;
+        if (!movedAside && FileExists(live)) {
+            error = "Could not move the old " + name + " out of the way.";
+            RollbackCommitted(committed);
+            return false;
+        }
         if (rename(staged.c_str(), live.c_str()) != 0) {
             error = "Could not replace " + name + ".";
-            if (hadOriginal) {
+            if (movedAside) {
                 rename(backup.c_str(), live.c_str());
             }
-            for (const auto& done : committed) {
-                const std::string doneLive = PathIn(done);
-                remove(doneLive.c_str());
-                rename((doneLive + ".bak").c_str(), doneLive.c_str());
-            }
+            RollbackCommitted(committed);
             return false;
         }
         committed.push_back(name);
@@ -388,6 +416,53 @@ void RemoveStaged(const std::vector<std::string>& names) {
     for (const auto& name : names) {
         remove((PathIn(name) + ".new").c_str());
     }
+}
+
+std::vector<std::string> ReadPending() {
+    std::vector<std::string> names;
+    FILE* file = fopen(PathIn(kPendingName).c_str(), "rb");
+    if (file == nullptr) {
+        return names;
+    }
+    char line[192];
+    while (fgets(line, sizeof(line), file) != nullptr) {
+        std::string name(line);
+        while (!name.empty() && (name.back() == '\n' || name.back() == '\r' || name.back() == ' ')) {
+            name.pop_back();
+        }
+        if (name.empty()) {
+            continue;
+        }
+        if (!IsSafePayloadName(name)) {
+            SPDLOG_WARN("[Updater] Ignoring staged entry '{}'", name);
+            continue;
+        }
+        names.push_back(name);
+    }
+    fclose(file);
+    return names;
+}
+
+bool WritePending(const std::vector<std::string>& names) {
+    const std::string path = PathIn(kPendingName);
+    FILE* file = fopen(path.c_str(), "wb");
+    if (file == nullptr) {
+        return false;
+    }
+    bool ok = true;
+    for (const auto& name : names) {
+        ok = fprintf(file, "%s\n", name.c_str()) > 0 && ok;
+    }
+    ok = fflush(file) == 0 && ok;
+    fclose(file);
+    if (!ok) {
+        remove(path.c_str());
+    }
+    return ok;
+}
+
+void ClearPending() {
+    remove(PathIn(kPendingName).c_str());
 }
 
 void CheckWorker(bool silent) {
@@ -490,6 +565,9 @@ void InstallWorker(std::string url, uint64_t expectedSize) {
     const std::string zipPath = PathIn("docklight-update.zip.part");
     std::vector<std::string> staged;
     std::string error;
+
+    RemoveStaged(ReadPending());
+    ClearPending();
 
     FILE* zipFile = fopen(zipPath.c_str(), "wb");
     if (zipFile == nullptr) {
@@ -605,10 +683,11 @@ void InstallWorker(std::string url, uint64_t expectedSize) {
         return;
     }
 
-    SetState(State::Installing, "Swapping files in...");
-    if (!CommitPayload(staged, error)) {
+    // The files cannot be swapped in from here as lighthouse.o2r is held by the current process.
+    SetState(State::Installing, "Staging files for restart...");
+    if (!WritePending(staged)) {
         RemoveStaged(staged);
-        Fail(error);
+        Fail("Could not record the staged update in " + InstallDir() + ".");
         return;
     }
 
@@ -616,9 +695,9 @@ void InstallWorker(std::string url, uint64_t expectedSize) {
         std::lock_guard<std::mutex> lock(sMutex);
         sStatus.installedFiles = staged;
         sStatus.state = State::Installed;
-        sStatus.message = "Installed. Restart Docklight to run the new version.";
+        sStatus.message = "Downloaded and verified. Restart Docklight to finish installing.";
     }
-    Notification::Emit({ .prefix = "Update installed.", .message = "Restart to play it." });
+    Notification::Emit({ .prefix = "Update ready.", .message = "Restart to install it." });
 }
 
 void RunAsync(std::function<void()> work) {
@@ -652,6 +731,51 @@ void SetProgramPath(const char* argv0) {
     }
 }
 
+void ApplyPendingUpdate() {
+    const std::vector<std::string> pending = ReadPending();
+    if (pending.empty()) {
+        ClearPending();
+        return;
+    }
+
+    for (const auto& name : pending) {
+        if (!FileExists(PathIn(name) + ".new")) {
+            SPDLOG_ERROR("[Updater] Staged update is missing {}.new, discarding it", name);
+            RemoveStaged(pending);
+            ClearPending();
+            sBootFailed = true;
+            sBootMessage = "The staged update was incomplete and has been discarded. Please try again.";
+            return;
+        }
+    }
+
+    SPDLOG_INFO("[Updater] Committing {} staged file(s)", pending.size());
+    std::string error;
+    if (!CommitPayload(pending, error)) {
+        SPDLOG_ERROR("[Updater] {}", error);
+        RemoveStaged(pending);
+        ClearPending();
+        sBootFailed = true;
+        sBootMessage = error + " Nothing was changed.";
+        return;
+    }
+    ClearPending();
+
+    const std::string self = sProgramPath.empty() ? "Lighthouse.nro" : Basename(sProgramPath);
+    const bool replacedSelf = std::any_of(pending.begin(), pending.end(),
+                                          [&self](const std::string& name) { return EqualsIgnoreCase(name, self); });
+    if (!replacedSelf) {
+        return;
+    }
+
+    if (QueueNextLoad(sProgramPath.empty() ? PathIn(self) : sProgramPath)) {
+        exit(0);
+    }
+    SPDLOG_WARN("[Updater] Update applied but this loader cannot relaunch homebrew");
+    sBootMessage = "The update was installed, but Docklight could not relaunch itself into it. Quit and start "
+                   "Docklight again to run the new version.";
+}
+
 void Init() {
     if (curl_global_init(CURL_GLOBAL_DEFAULT) != CURLE_OK) {
         SPDLOG_ERROR("[Updater] curl_global_init failed.");
@@ -659,6 +783,14 @@ void Init() {
     }
     sCurlReady.store(true);
     SPDLOG_INFO("[Updater] Docklight {}, install directory {}", gDocklightVersion, InstallDir());
+
+    // ApplyPendingUpdate ran before there was anywhere to say this.
+    if (!sBootMessage.empty()) {
+        SetState(sBootFailed ? State::Failed : State::Idle, sBootMessage);
+        Notification::Emit({ .prefix = "Update",
+                             .message = sBootFailed ? "was not applied." : "needs a manual relaunch.",
+                             .suffix = "See Settings > Updates." });
+    }
 
     if (CVarGetInteger(CVAR_SETTING("Updater.CheckOnBoot"), 0)) {
         CheckForUpdates(true);

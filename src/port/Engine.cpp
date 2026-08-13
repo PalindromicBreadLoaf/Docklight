@@ -1053,6 +1053,7 @@ void GameEngine::Create(int argc, char* argv[]) {
     Lighthouse::ParseLaunchArgs(argc, argv);
 #ifdef ENABLE_UPDATER
     Updater::SetProgramPath(argc > 0 ? argv[0] : nullptr);
+    Updater::ApplyPendingUpdate();
 #endif
     const auto instance = Instance = new GameEngine();
     // instance->AudioInit();

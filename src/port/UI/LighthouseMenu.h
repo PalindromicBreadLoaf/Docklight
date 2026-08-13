@@ -27,6 +27,8 @@ public:
     void AddMenuRando();
 
 private:
+    void CheckMenuShortcut();
+
     char mGitCommitHashTruncated[8];
     bool mIsTaggedVersion;
 };

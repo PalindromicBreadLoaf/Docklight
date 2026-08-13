@@ -228,8 +228,29 @@ void LighthouseMenu::InitElement() {
     };
 }
 
+// Also set `L` + `R` + DPad Up
+void LighthouseMenu::CheckMenuShortcut() {
+    if (!ImGui::IsKeyDown(ImGuiKey_GamepadL1) || !ImGui::IsKeyDown(ImGuiKey_GamepadR1) ||
+        !ImGui::IsKeyPressed(ImGuiKey_GamepadDpadUp, false)) {
+        return;
+    }
+
+    ToggleVisibility();
+
+    auto ctx = Ship::Context::GetRawInstance();
+    ctx->GetWindow()->GetMouseStateManager()->UpdateMouseCapture();
+
+    auto& io = ImGui::GetIO();
+    if (CVarGetInteger(CVAR_IMGUI_CONTROLLER_NAV, 0) && ctx->GetWindow()->GetGui()->GetMenuOrMenubarVisible()) {
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    } else {
+        io.ConfigFlags &= ~ImGuiConfigFlags_NavEnableGamepad;
+    }
+}
+
 void LighthouseMenu::UpdateElement() {
     Ship::Menu::UpdateElement();
+    CheckMenuShortcut();
 }
 
 void LighthouseMenu::Draw() {

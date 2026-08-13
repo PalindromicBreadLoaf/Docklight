@@ -56,6 +56,7 @@
 #include "UI/LighthouseGui.hpp"
 #include "UI/LighthouseModMenuWindow.h"
 #include "LaunchArgs.h"
+#include "port/Updater/Updater.h"
 
 #ifdef __SWITCH__
 #include <ship/port/switch/SwitchImpl.h>
@@ -1050,6 +1051,9 @@ void GameEngine::ScaleImGui() {
 
 void GameEngine::Create(int argc, char* argv[]) {
     Lighthouse::ParseLaunchArgs(argc, argv);
+#ifdef ENABLE_UPDATER
+    Updater::SetProgramPath(argc > 0 ? argv[0] : nullptr);
+#endif
     const auto instance = Instance = new GameEngine();
     // instance->AudioInit();
     // DisplayListPatch::Run();
@@ -1062,6 +1066,9 @@ void GameEngine::Create(int argc, char* argv[]) {
     SaveManager_Init();
     ShipInit::InitAll();
     ShipInit::Init("BOOT");
+#ifdef ENABLE_UPDATER
+    Updater::Init();
+#endif
 
     // Stop rumble on any exit path (including direct exit() calls)
     atexit([]() {
@@ -1080,6 +1087,10 @@ extern void ResourceHelpers_ClearRefCache();
 void ReleaseSoundfonts();
 
 void GameEngine::Destroy() {
+#ifdef ENABLE_UPDATER
+    Updater::Shutdown();
+#endif
+
     // Stop rumble on all controllers before tearing down
     if (Instance->context && Instance->context->GetControlDeck()) {
         for (int i = 0; i < 4; i++) {

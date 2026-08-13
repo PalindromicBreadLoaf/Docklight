@@ -163,6 +163,15 @@ set(VERSION us)
 option(USE_NETWORKING "Enable networking features" ON)
 set(SKIP_XCODE_VERSION_CHECK ON)
 
+set(DOCKLIGHT_VERSION "1.0.1" CACHE STRING "Docklight release version (X.Y.Z)")
+set(DOCKLIGHT_UPDATE_REPO "PalindromicBreadLoaf/Docklight" CACHE STRING "GitHub owner/repo")
+if(NOT DOCKLIGHT_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
+    message(FATAL_ERROR "DOCKLIGHT_VERSION must be X.Y.Z, got '${DOCKLIGHT_VERSION}'")
+endif()
+set(DOCKLIGHT_VERSION_MAJOR ${CMAKE_MATCH_1})
+set(DOCKLIGHT_VERSION_MINOR ${CMAKE_MATCH_2})
+set(DOCKLIGHT_VERSION_PATCH ${CMAKE_MATCH_3})
+
 # Add compile definitions for the target
 add_compile_definitions(
     VERSION_US=1
@@ -453,6 +462,15 @@ if(USE_NETWORKING)
         include_directories(${SDL2_NET_INCLUDE_DIRS})
     endif()
     target_compile_definitions(${PROJECT_NAME} PRIVATE USE_NETWORKING)
+endif()
+
+option(ENABLE_UPDATER "Build the updater (Switch only)" ON)
+if(ENABLE_UPDATER AND CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(CURL REQUIRED IMPORTED_TARGET libcurl)
+    pkg_check_modules(MBEDCRYPTO REQUIRED IMPORTED_TARGET mbedcrypto)
+    target_link_libraries(${PROJECT_NAME} PRIVATE PkgConfig::CURL PkgConfig::MBEDCRYPTO)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE ENABLE_UPDATER)
 endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Windows")

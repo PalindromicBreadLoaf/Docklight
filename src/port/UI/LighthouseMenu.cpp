@@ -129,6 +129,7 @@ LighthouseMenu::LighthouseMenu(const std::string& consoleVariable, const std::st
 void LighthouseMenu::InitElement() {
     Ship::Menu::InitElement();
     AddMenuSettings();
+    AddMenuUpdates();
     AddMenuEnhancements();
     AddMenuNetwork();
     AddMenuDevTools();

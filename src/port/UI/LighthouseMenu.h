@@ -20,6 +20,7 @@ public:
     void AddSidebarEntry(std::string sectionName, std::string sidbarName, uint32_t columnCount);
     WidgetInfo& AddWidget(WidgetPath& pathInfo, std::string widgetName, WidgetType widgetType);
     void AddMenuSettings();
+    void AddMenuUpdates();
     void AddMenuEnhancements();
     void AddMenuNetwork();
     void AddMenuDevTools();

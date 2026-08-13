@@ -11,6 +11,13 @@ extern u16 gBuildVersionMajor;
 extern u16 gBuildVersionMinor;
 extern u16 gBuildVersionPatch;
 
+// Docklight Version Information
+extern char gDocklightVersion[];
+extern u16 gDocklightVersionMajor;
+extern u16 gDocklightVersionMinor;
+extern u16 gDocklightVersionPatch;
+extern char gDocklightUpdateRepo[];
+
 extern char gGitBranch[];
 extern char gGitCommitHash[];
 extern char gGitCommitTag[];

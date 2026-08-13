@@ -6,6 +6,13 @@ const u16 gBuildVersionMajor = @CMAKE_PROJECT_VERSION_MAJOR@;
 const u16 gBuildVersionMinor = @CMAKE_PROJECT_VERSION_MINOR@;
 const u16 gBuildVersionPatch = @CMAKE_PROJECT_VERSION_PATCH@;
 
+// Docklight Version information
+const char gDocklightVersion[] = "@DOCKLIGHT_VERSION@";
+const u16 gDocklightVersionMajor = @DOCKLIGHT_VERSION_MAJOR@;
+const u16 gDocklightVersionMinor = @DOCKLIGHT_VERSION_MINOR@;
+const u16 gDocklightVersionPatch = @DOCKLIGHT_VERSION_PATCH@;
+const char gDocklightUpdateRepo[] = "@DOCKLIGHT_UPDATE_REPO@";
+
 const char gGitBranch[] = "@CMAKE_PROJECT_GIT_BRANCH@";
 const char gGitCommitHash[] = "@CMAKE_PROJECT_GIT_COMMIT_HASH@";
 const char gGitCommitTag[] = "@CMAKE_PROJECT_GIT_COMMIT_TAG@";

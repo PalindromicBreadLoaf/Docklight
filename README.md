@@ -76,6 +76,9 @@ When reporting a crash, please include `Lighthouse.log`, the Docklight version, 
 the corresponding Atmosphère report from `atmosphere/crash_reports/`, if one was created. Open reports on the
 [Docklight issue tracker](https://github.com/PalindromicBreadLoaf/Docklight/issues).
 
+Mods require enabling in the in-game menu (which can be accessed through either the `-` button or `R`+`L`+Dpad-Up).
+Sometimes it is necessary to disable and re-enable mods to get them to work properly.
+
 ## Building Docklight
 
 Install devkitPro with devkitA64, libnx, and the Switch portlibs for SDL2, OpenGL/EGL, PNG, zlib, bzip2, FreeType,

@@ -3,7 +3,7 @@
 Docklight is the Nintendo Switch port of
 [Lighthouse](https://github.com/HarbourMasters/Lighthouse), which itself is Harbour Masters' PC port of Banjo-Kazooie.
 All data compatible with Lighthouse should be kept compatible with Docklight.
-Docklight is currently based on Lighthouse version Split Rock Bravo 1.0.1
+Docklight is currently based on Lighthouse version Hatteras Alfa 1.1.0
 
 Docklight does not include copyrighted game assets. You must provide a legally obtained dump of a supported retail
 copy of Banjo-Kazooie and generate `bk.o2r` from it on a PC.
@@ -103,8 +103,3 @@ cmake --build build-cmake -j
 ```
 
 A special thanks to Harbour Masters and all Lighthouse contributors for making this port possible in the first place.
-
-## Support Docklight
-
-If you’d like to support Docklight’s development and testing, you can
-  [donate to PalindromicBreadLoaf on Ko-fi](https://ko-fi.com/palindromicbreadloaf).

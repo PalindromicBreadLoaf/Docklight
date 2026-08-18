@@ -163,7 +163,7 @@ set(VERSION us)
 option(USE_NETWORKING "Enable networking features" ON)
 set(SKIP_XCODE_VERSION_CHECK ON)
 
-set(DOCKLIGHT_VERSION "1.0.3" CACHE STRING "Docklight release version (X.Y.Z)")
+set(DOCKLIGHT_VERSION "1.1.0" CACHE STRING "Docklight release version (X.Y.Z)")
 set(DOCKLIGHT_UPDATE_REPO "PalindromicBreadLoaf/Docklight" CACHE STRING "GitHub owner/repo")
 if(NOT DOCKLIGHT_VERSION MATCHES "^([0-9]+)\\.([0-9]+)\\.([0-9]+)$")
     message(FATAL_ERROR "DOCKLIGHT_VERSION must be X.Y.Z, got '${DOCKLIGHT_VERSION}'")

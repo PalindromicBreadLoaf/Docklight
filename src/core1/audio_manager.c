@@ -332,10 +332,10 @@ void audioManager_create(void) {
 
     for (i = 0; i < 89; i++) {
         alLink(&sDMAStateData[i + 1].link, &sDMAStateData[i].link);
-        sDMAStateData[i].heap = (uintptr_t)alHeapDBAlloc(0, 0, sn_alConfig.heap, 1, DMA_BLOCK_SIZE);
+        sDMAStateData[i].heap = (uintptr_t)alHeapAlloc(sn_alConfig.heap, 1, DMA_BLOCK_SIZE);
     }
 
-    sDMAStateData[i].heap = (uintptr_t)alHeapDBAlloc(0, 0, sn_alConfig.heap, 1, DMA_BLOCK_SIZE);
+    sDMAStateData[i].heap = (uintptr_t)alHeapAlloc(sn_alConfig.heap, 1, DMA_BLOCK_SIZE);
 
     for (i = 0; i < 2; i++) {
         audioManager.ACMDList[i] = bk_malloc(NUM_AUDIO_CMDS_PER_SECOND * sizeof(Acmd) / FRAMERATE);
@@ -344,7 +344,7 @@ void audioManager_create(void) {
     sNumAudioCmdsPerFrame = NUM_AUDIO_CMDS_PER_SECOND / FRAMERATE;
 
     for (i = 0; i < 3; i++) {
-        audioManager.audio_info[i] = alHeapDBAlloc(0, 0, sn_alConfig.heap, 1, sizeof(AudioInfo));
+        audioManager.audio_info[i] = alHeapAlloc(sn_alConfig.heap, 1, sizeof(AudioInfo));
         audioManager.audio_info[i]->reply_mesg_data.unk0 = 0;
         audioManager.audio_info[i]->reply_mesg_data.audio_info_ptr = audioManager.audio_info[i];
         audioManager.audio_info[i]->data = bk_malloc(4 * sMaxFrameSize);
@@ -357,7 +357,11 @@ void audioManagerThread_entry(void *arg) {
     s32 skip_handle_done_mesg = 1;
 
     while (true) {
-        osRecvMesg(&audioManager.audioFrameMsgQ, NULL, OS_MESG_BLOCK);
+        // [port] False when the pump owes the playback cushion a catch-up frame, which it takes
+        // without waiting.
+        if (port_audioPumpShouldWait()) {
+            osRecvMesg(&audioManager.audioFrameMsgQ, NULL, OS_MESG_BLOCK);
+        }
         if (OS_ThreadShouldExit()) { // [port] cooperative shutdown
             return;
         }
@@ -375,14 +379,6 @@ void audioManagerThread_entry(void *arg) {
             } else {
                 skip_handle_done_mesg--;
             }
-        }
-        // [port] The N64 pacing is open-loop (pump cadence x frame size vs the
-        // DAC, same crystal), so a pump missed on PC drains the playback
-        // cushion for tens of seconds. Self-post one extra frame at a time,
-        // re-deciding on the fresh buffer level after each push, until the
-        // cushion is rebuilt.
-        if (port_audioCatchupFrames() > 0) {
-            osSendMesgPtr(&audioManager.audioFrameMsgQ, NULL, OS_MESG_NOBLOCK);
         }
     }
 }

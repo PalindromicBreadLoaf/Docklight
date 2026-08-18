@@ -1,13 +1,14 @@
 #pragma once
 
 #include "libultraship/libultra/types.h"
+#include "port/UI/cvar_prefixes.h"
 #include "enums.h"
 
 void LoadGuiTextures();
 
 #ifdef __cplusplus
 #include <nlohmann/json.hpp>
-#define WIDGET_COLOR UIWidgets::Colors(CVarGetInteger("gSettings.Menu.Theme", 5))
+#define WIDGET_COLOR UIWidgets::Colors(CVarGetInteger(CVAR_SETTING("Menu.Theme"), 5))
 extern int32_t gSelectedFileNum;
 
 using nlohmann::json;
@@ -22,6 +23,10 @@ void TableCellCenteredText(const char* text);
 uint32_t Ship_Hash(std::string str);
 std::string port_FormatTimeDisplay(uint64_t value);
 
+template <typename T, typename Container> bool ContainerContains(const T& element, const Container& container) {
+    return std::find(container.begin(), container.end(), element) != container.end();
+}
+
 extern "C" {
 #endif
 
@@ -35,6 +40,7 @@ u32 port_jiggyscore_isCollectedRaw(enum jiggy_e jiggy_id);
 bool port_honeycombscore_getRaw(enum honeycomb_e indx);
 
 // SPDLOG level wrappers callable from C
+void BK_LOG_DEBUG(const char* fmt, ...);
 void BK_LOG_INFO(const char* fmt, ...);
 void BK_LOG_WARN(const char* fmt, ...);
 void BK_LOG_ERROR(const char* fmt, ...);

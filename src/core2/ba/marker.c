@@ -585,7 +585,7 @@ void __baMarker_resolveCollision(Prop *other_prop){
                         __baMarker_8028B848();
                     }
 
-                    if (func_8025AD7C(COMUSIC_30_5TH_JINJO_COLLECTED) && EventSystem_Should(VB_PLAY_JIGGY_DANCE, true)) {
+                    if (comusic_isTrackQueued(COMUSIC_30_5TH_JINJO_COLLECTED) && EventSystem_Should(VB_PLAY_JIGGY_DANCE, true)) {
                         __baMarker_8028B8DC();
                     }
                     __spawnQueue_add_4((GenFunction_4)__baMarker_8028B904, reinterpret_cast(u32, other_prop->actorProp.x), reinterpret_cast(u32, other_prop->actorProp.y), reinterpret_cast(u32, other_prop->actorProp.z), jiggy_id);
@@ -645,7 +645,7 @@ void __baMarker_resolveCollision(Prop *other_prop){
 
             case MARKER_169_SNS_EGG: //L8028C908
             { //ONLY THIS CASE DOESN'T MATCH
-                if (!EventSystem_Should(VB_OVERRIDE_SNS_MAP_CHECK, false)) {
+                if (!EventSystem_Should(VB_OVERRIDE_SNS_MAP_CHECK, false, SNS_MAP_CHECK_PICKUP)) {
                     switch (gsworld_getMap())
                     {
                     case MAP_1D_MMM_CELLAR: //L8028C95C
@@ -942,8 +942,8 @@ void baMarker_update(void){
     Prop *other_prop;
 
     if ((D_8037BF88 != 0)){
-        temp_s0 = func_8024FEEC(func_8025ADD4(COMUSIC_30_5TH_JINJO_COLLECTED) & 0xFF);
-        if((coMusicPlayer_getTrackCount() < 4 && temp_s0 >= 0xBB9) || !func_8025AD7C(COMUSIC_30_5TH_JINJO_COLLECTED)){
+        temp_s0 = musicSlot_getCSeqTicks(comusic_getTrackPosition(COMUSIC_30_5TH_JINJO_COLLECTED));
+        if((coMusicPlayer_getTrackCount() < 4 && temp_s0 >= 0xBB9) || !comusic_isTrackQueued(COMUSIC_30_5TH_JINJO_COLLECTED)){
             func_8028F918(0);
             D_8037BF88 = 0;
         }

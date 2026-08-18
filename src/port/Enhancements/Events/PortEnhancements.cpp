@@ -22,10 +22,13 @@ void PortEnhancements_Register() {
     REGISTER_EVENT(OnControllerUpdate);
     REGISTER_EVENT(VanillaBehavior);
     REGISTER_EVENT(OnMapLoad);
+    REGISTER_EVENT(OnMapLoadStub);
     REGISTER_EVENT(OnDialogLoaded);
     REGISTER_EVENT(OnModelLoad);
     REGISTER_EVENT(OnModelDisplayListLoad);
     REGISTER_EVENT(ViewportFrustumUpdate);
+    REGISTER_EVENT(CameraRotationAuthored);
+    REGISTER_EVENT(MapModelXluScale);
     REGISTER_EVENT(OnTransitionModelScale);
     REGISTER_EVENT(OnTransitionStateUpdate);
     REGISTER_EVENT(DrawDistanceCubeWidth);

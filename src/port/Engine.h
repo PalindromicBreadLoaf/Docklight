@@ -70,6 +70,7 @@ public:
     static uint32_t GetInterpolationFPS();
     static uint32_t GetInterpolationFrameCount();
     static bool IsInterpolationEnabled();
+    static void SetInterpolationRecorded(bool recorded);
     static void ProcessGfxCommands(Gfx* commands);
     static ImFont* CreateFontWithSize(float size, std::string fontPath);
     static void ScaleImGui();

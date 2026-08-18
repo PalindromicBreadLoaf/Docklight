@@ -248,6 +248,7 @@ void push_frame() {
     GameEngine::Instance->StartFrame();
     port_animVtx_beginTick();
     const bool recordInterpolation = GameEngine::IsInterpolationEnabled();
+    GameEngine::SetInterpolationRecorded(recordInterpolation);
     if (recordInterpolation) {
         FrameInterpolation_StartRecord();
     }

@@ -437,7 +437,7 @@ void func_803382FC(s32);
 void func_80315200(GcZoombox *this){
      s32 s1 = 0;
      if(-1.0f == this->unk110[0]){
-          if(func_8025AD7C(this->unk108[0])){
+          if(comusic_isTrackQueued(this->unk108[0])){
                func_8025A7DC(this->unk108[0]);
           }
      }else{
@@ -546,7 +546,7 @@ void func_803155C8(GcZoombox *this){
     this->unk1A4_26 = 0;
     this->unk1A4_31 = 0;
     if(-1.0f ==  this->unk110[0]){
-        if(func_8025AD7C(this->unk108[0])){
+        if(comusic_isTrackQueued(this->unk108[0])){
             func_8025A7DC(this->unk108[0]);
         }
     }else{
@@ -612,7 +612,7 @@ void func_8031594C(GcZoombox * this, u8 *str, s32 arg2, s32 arg3){
      s0 = arg2;
      s4 = this;
      s1 = 0;
-     f22 = (this->portrait_id == ZOOMBOX_SPRITE_5F_TOOTY_4) ? 0.4 : 0.8;
+     f22 = (this->portrait_id == ZOOMBOX_SPRITE_5F_SEXY_GRUNTY) ? 0.4 : 0.8;
 
      // [port] The zoombox draws from the shared gameplay RNG, and these two calls are a
      // save/restore of the whole state around that.
@@ -677,7 +677,7 @@ void func_8031594C(GcZoombox * this, u8 *str, s32 arg2, s32 arg3){
 u8 func_80315BC0(GcZoombox *this, enum sfx_e sfx_id, s32 arg2){
      u8 sp1F = func_8030ED2C(sfx_id, arg2) & 0xff;
      func_8030DD90(sp1F, 0);
-     if(this->portrait_id == ZOOMBOX_SPRITE_66_LOCKUP){
+     if(this->portrait_id == ZOOMBOX_SPRITE_66_GRUNTILDA_4){
           func_8030DCCC(sp1F, 0x40);
      }
      return sp1F;
@@ -716,7 +716,7 @@ void func_80315C90(GcZoombox *this, s32 arg1) {
         }
 
         if (this->unk110[0] == -1.0f) {
-            if (func_8025AD7C(this->unk108[0]) == 0) {
+            if (comusic_isTrackQueued(this->unk108[0]) == 0) {
                 comusic_playTrack(this->unk108[0]);
             }
         } else {

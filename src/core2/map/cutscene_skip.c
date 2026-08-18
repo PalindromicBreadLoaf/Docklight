@@ -33,7 +33,9 @@ bool cutscene_skipIntroCutsceneCheck(void) {
     // [port] Skip intro cutscene
     if (!EventSystem_Should(VB_PLAY_INTRO_CUTSCENE, true) && func_8024E698(0) == 1) { return true; }
 
-    if ((func_8024E698(0) == 1) && (gameFile_anyNonEmpty() != 0)) {
+    // [port] Romhack gate: hacks that force the skip drop the "has a save file" term.
+    if ((func_8024E698(0) == 1) &&
+        (!EventSystem_Should(VB_CUTSCENE_SKIP_REQUIRE_PROGRESS, true) || gameFile_anyNonEmpty() != 0)) {
         return true;
     }
     return false;
@@ -47,7 +49,8 @@ bool cutscene_skipEnterLairCutsceneCheck(void) {
     if (skipMiscCutscenes && func_8024E698(0) == 1) { return true; }
 
     if ((func_8024E698(0) == 1)
-        && ((D_8037DCCE[0] != 0)
+        && (!EventSystem_Should(VB_CUTSCENE_SKIP_REQUIRE_PROGRESS, true)
+            || (D_8037DCCE[0] != 0)
             || (D_8037DCCE[1] != 0)
             || (D_8037DCCE[2] != 0))) {
         return true;
@@ -59,21 +62,28 @@ bool cutscene_skipEnterLairCutsceneCheck(void) {
 bool cutscene_skipGameOverCutsceneCheck(void) {
     s32 sp24;
 
+    // [port] Romhack gate: hacks that always run the game-over return drop every
+    // progress precondition below and pick their own destination map.
+    bool requireProgress = EventSystem_Should(VB_CUTSCENE_SKIP_REQUIRE_PROGRESS, true);
+
     sp24 = func_8024E698(0);
-    if (mapSpecificFlags_get(0) != 0) {
+    if (!requireProgress || mapSpecificFlags_get(0) != 0) {
         fileProgressFlag_set(FILEPROG_E1_UNKNOWN, 1);
     }
     bool skipMiscCutscenes = false;
     CALL_EVENT(OnMiscCutscenesCheck, &skipMiscCutscenes);
     if (skipMiscCutscenes && func_8024E698(0) == 1) { return true; }
 
-    if ((sp24 == 1) && fileProgressFlag_get(FILEPROG_E1_UNKNOWN) && !gctransition_8030BDC0()) {
-        if (!mapSpecificFlags_get(0xC)) {
+    if ((sp24 == 1) && (!requireProgress || fileProgressFlag_get(FILEPROG_E1_UNKNOWN)) &&
+        !gctransition_8030BDC0()) {
+        if (!requireProgress || !mapSpecificFlags_get(0xC)) {
             mapSpecificFlags_set(0xC, true);
             func_802DC528(0, 0);
             timedFunc_set_2(11.0f, (GenFunction_2)func_802DC560, 0, 0);
             // [port] Honor BootSequence so Save & Quit lands at the same place as a fresh boot.
-            timedFunc_set_3(12.0f, (GenFunction_3)transitionToMap, getDefaultBootMap(), 0, 1);
+            s32 returnMap = getDefaultBootMap();
+            EventSystem_Should(VB_GAME_OVER_RETURN_MAP, true, &returnMap);
+            timedFunc_set_3(12.0f, (GenFunction_3)transitionToMap, returnMap, 0, 1);
         } else {
             timedFuncQueue_flush();
         }
@@ -138,8 +148,8 @@ void func_8031CB50(enum map_e map_id, s32 exit_id, s32 arg2) {
         // [port] Romhack gate: a listener may call musicKeepsPlaying() here to
         // carry a special-music state across this warp.
         EventSystem_Should(VB_WARP_KEEPS_MUSIC, true, map_id);
-        sp1C = func_803226E8(gsworld_getMap());
-        if ((func_803226E8(map_id) != sp1C) && (func_80322914() == 0)) {
+        sp1C = core2_9B650_getMusicTrackFromMap(gsworld_getMap());
+        if ((core2_9B650_getMusicTrackFromMap(map_id) != sp1C) && (func_80322914() == 0)) {
             func_8025A388(0, 0x4E2);
             func_8025AB00();
             core1_ce60_incOrDecCounter(false);

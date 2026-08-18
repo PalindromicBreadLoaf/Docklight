@@ -218,7 +218,7 @@ void gsworld_free(void) {
     dialogBin_terminate();
     playerModel_free();
     if (!func_80322914()) {
-        func_8024F7C4(func_803226E8(sGsWorldData.map));
+        musicTrack_release(core2_9B650_getMusicTrackFromMap(sGsWorldData.map));
     }
     core1_7090_release();
     AnimTextureListCache_free();
@@ -245,7 +245,7 @@ void gsworld_set(enum map_e arg0, s32 arg1, s32 arg2) {
         func_8038E7C4();
     }
     if (func_80322914() == 0) {
-        func_8024F764(func_803226E8(sGsWorldData.map));
+        musicTrack_load(core2_9B650_getMusicTrackFromMap(sGsWorldData.map));
     }
     func_80320B84();
     AnimTextureListCache_init();
@@ -264,7 +264,10 @@ void gsworld_set(enum map_e arg0, s32 arg1, s32 arg2) {
     func_80332894();
     func_803305AC();
     func_8031F9E8();
+    // [port] Romhack gate: func_80323230 is an empty stub, and romhacks hijack it as
+    // an injection point in the map-load chain.
     func_80323230();
+    CALL_EVENT(OnMapLoadStub);
     commonParticleType_init();
     animBinCache_init();
     animsprite_init();
